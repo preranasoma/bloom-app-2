@@ -4,6 +4,7 @@ import {
   Check, Leaf, Plus, LogOut, Crown
 } from 'lucide-react';
 import { supabase, loadGameState } from './supabase.js';
+import MemoryGame from './games/MemoryGame.jsx';
 
 const PLANT_TYPES = {
   sprout:    { name: 'Lil Sprout',     stages: ['🌱','🌿','🌳'], hue: 'mint'     },
@@ -18,41 +19,40 @@ const PLANT_TYPES = {
 
 const SHOP = {
   Supplies: [
-    { id: 'water', name: 'Watering Can', price: 10, icon: '💧', desc: 'Adds 1 use' },
-    { id: 'fertilizer', name: 'Fertilizer', price: 25, icon: '✨', desc: 'Adds 1 use' },
-    { id: 'rain_cloud', name: 'Rain Cloud', price: 30, icon: '☁️', desc: 'Waters all plants' },
+    { id: 'water',      name: 'Watering Can', price: 10,  icon: '💧', desc: 'Adds 1 use'        },
+    { id: 'fertilizer', name: 'Fertilizer',   price: 25,  icon: '✨', desc: 'Adds 1 use'        },
+    { id: 'rain_cloud', name: 'Rain Cloud',   price: 30,  icon: '☁️', desc: 'Waters all plants' },
   ],
   Seeds: [
-    { id: 'sunflower', name: 'Sunflower Seed', price: 50, icon: '🌻', plant: 'sunflower' },
-    { id: 'cactus', name: 'Cactus Cutting', price: 60, icon: '🌵', plant: 'cactus' },
-    { id: 'tulip', name: 'Tulip Bulb', price: 70, icon: '🌷', plant: 'tulip' },
-    { id: 'rose', name: 'Rose Cutting', price: 80, icon: '🌹', plant: 'rose' },
-    { id: 'hibiscus', name: 'Hibiscus Seed', price: 100, icon: '🌺', plant: 'hibiscus' },
-    { id: 'cherry', name: 'Cherry Sapling', price: 120, icon: '🌸', plant: 'cherry' },
-    { id: 'bonsai', name: 'Bonsai Starter', price: 200, icon: '🪴', plant: 'bonsai' },
+    { id: 'sunflower', name: 'Sunflower Seed', price: 50,  icon: '🌻', plant: 'sunflower' },
+    { id: 'cactus',    name: 'Cactus Cutting', price: 60,  icon: '🌵', plant: 'cactus'    },
+    { id: 'tulip',     name: 'Tulip Bulb',     price: 70,  icon: '🌷', plant: 'tulip'     },
+    { id: 'rose',      name: 'Rose Cutting',   price: 80,  icon: '🌹', plant: 'rose'      },
+    { id: 'hibiscus',  name: 'Hibiscus Seed',  price: 100, icon: '🌺', plant: 'hibiscus'  },
+    { id: 'cherry',    name: 'Cherry Sapling', price: 120, icon: '🌸', plant: 'cherry'    },
+    { id: 'bonsai',    name: 'Bonsai Starter', price: 200, icon: '🪴', plant: 'bonsai'    },
   ],
   Pots: [
-    { id: 'pot_pink', name: 'Bubblegum Pot', price: 40, icon: '🌷', color: 'pink' },
-    { id: 'pot_lavender', name: 'Lilac Pot', price: 40, icon: '🪻', color: 'lavender' },
-    { id: 'pot_lemon', name: 'Sunny Pot', price: 40, icon: '🍋', color: 'lemon' },
-    { id: 'pot_mint', name: 'Mint Pot', price: 40, icon: '🌿', color: 'mint' },
+    { id: 'pot_pink',     name: 'Bubblegum Pot', price: 40, icon: '🌷', color: 'pink'     },
+    { id: 'pot_lavender', name: 'Lilac Pot',     price: 40, icon: '🪻', color: 'lavender' },
+    { id: 'pot_lemon',    name: 'Sunny Pot',     price: 40, icon: '🍋', color: 'lemon'    },
+    { id: 'pot_mint',     name: 'Mint Pot',      price: 40, icon: '🌿', color: 'mint'     },
   ],
 };
 
+// Quests with optional `game` field — when present, the quest shows a Play button
 const QUEST_TEMPLATE = [
-  { id: 'login', name: 'Daily Visitor', desc: 'Visit your garden today', goal: 1, reward: 20, track: 'login' },
-  { id: 'water_3', name: 'Hydration Hero', desc: 'Water 3 plants', goal: 3, reward: 50, track: 'water' },
-  { id: 'fert_1', name: 'Growth Spurt', desc: 'Use fertilizer once', goal: 1, reward: 30, track: 'fertilize' },
-  { id: 'shop_1', name: 'Garden Shopper', desc: 'Buy something', goal: 1, reward: 25, track: 'shop' },
-  { id: 'plants_5', name: 'Green Thumb', desc: 'Have 5 plants total', goal: 5, reward: 100, track: 'plants' },
+  { id: 'login',        name: 'Daily Visitor',  desc: 'Visit your garden today',  goal: 1, reward: 20,  track: 'login'     },
+  { id: 'memory_match', name: 'Memory Match',   desc: "Solve today's puzzle",     goal: 1, reward: 75,  track: 'puzzle', game: 'memory' },
+  { id: 'water_3',      name: 'Hydration Hero', desc: 'Water 3 plants',           goal: 3, reward: 50,  track: 'water'     },
+  { id: 'fert_1',       name: 'Growth Spurt',   desc: 'Use fertilizer once',      goal: 1, reward: 30,  track: 'fertilize' },
+  { id: 'shop_1',       name: 'Garden Shopper', desc: 'Buy something',            goal: 1, reward: 25,  track: 'shop'      },
+  { id: 'plants_5',     name: 'Green Thumb',    desc: 'Have 5 plants total',      goal: 5, reward: 100, track: 'plants'    },
 ];
 
 const HUE_BG = {
-  pink: 'bg-[#FFE0EA]',
-  lemon: 'bg-[#FFF4C2]',
-  mint: 'bg-[#D6F3E2]',
-  peach: 'bg-[#FFE2CE]',
-  lavender: 'bg-[#E5DBF7]',
+  pink: 'bg-[#FFE0EA]', lemon: 'bg-[#FFF4C2]', mint: 'bg-[#D6F3E2]',
+  peach: 'bg-[#FFE2CE]', lavender: 'bg-[#E5DBF7]',
 };
 
 export default function App() {
@@ -64,7 +64,6 @@ export default function App() {
       setSession(data.session);
       setLoading(false);
     });
-
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -97,18 +96,14 @@ function AuthScreen() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setInfo(null);
-    setBusy(true);
-
+    setError(null); setInfo(null); setBusy(true);
     try {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email, password,
           options: { data: { username: username || email.split('@')[0] } },
         });
         if (error) throw error;
@@ -135,9 +130,7 @@ function AuthScreen() {
         className="relative z-10 w-full max-w-sm bg-white/80 backdrop-blur rounded-3xl p-7 border-2 border-white shadow-[0_8px_30px_-12px_rgba(255,154,191,0.5)]">
         <div className="text-center mb-5">
           <div className="text-5xl mb-2">🌷</div>
-          <h1 style={{ fontFamily: 'Caveat, cursive', fontSize: '2.6rem', lineHeight: 1, color: '#5D3F6A' }}>
-            bloom
-          </h1>
+          <h1 style={{ fontFamily: 'Caveat, cursive', fontSize: '2.6rem', lineHeight: 1, color: '#5D3F6A' }}>bloom</h1>
           <p className="text-sm text-[#9b86a8] mt-1" style={{ fontFamily: 'Nunito' }}>
             {mode === 'signin' ? 'welcome back, gardener' : 'plant your first sprout ✿'}
           </p>
@@ -146,7 +139,6 @@ function AuthScreen() {
         {mode === 'signup' && (
           <Field label="username" value={username} setValue={setUsername} placeholder="mochi_lover" />
         )}
-
         <Field label="email" type="email" value={email} setValue={setEmail} placeholder="you@garden.io" required />
         <Field label="password" type="password" value={password} setValue={setPassword} placeholder="••••••••" required minLength={6} />
 
@@ -173,9 +165,7 @@ function AuthScreen() {
 function Field({ label, value, setValue, ...rest }) {
   return (
     <label className="block mb-2.5">
-      <span className="text-xs ml-1 text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 700, letterSpacing: '0.05em' }}>
-        {label}
-      </span>
+      <span className="text-xs ml-1 text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 700, letterSpacing: '0.05em' }}>{label}</span>
       <input value={value} onChange={e => setValue(e.target.value)}
         className="w-full mt-1 px-4 py-2.5 rounded-2xl bg-[#FFF4F8] border-2 border-[#F0DDE8] focus:border-[#FF9CB8] outline-none transition"
         style={{ fontFamily: 'Nunito', fontWeight: 600, color: '#5D3F6A' }}
@@ -190,6 +180,7 @@ function PlantTracker({ session }) {
   const [state, setState] = useState(null);
   const [toast, setToast] = useState(null);
   const [confetti, setConfetti] = useState(false);
+  const [puzzleOpen, setPuzzleOpen] = useState(false);
 
   useEffect(() => {
     loadGameState(userId).then(setState).catch(err => {
@@ -200,7 +191,6 @@ function PlantTracker({ session }) {
 
   useEffect(() => {
     if (!state) return;
-
     const ch = supabase
       .channel('profile-' + userId)
       .on('postgres_changes',
@@ -217,7 +207,6 @@ function PlantTracker({ session }) {
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, [userId, state?.userId]);
 
@@ -225,18 +214,10 @@ function PlantTracker({ session }) {
     setToast({ msg, kind });
     setTimeout(() => setToast(null), 1800);
   };
-
-  const popConfetti = () => {
-    setConfetti(true);
-    setTimeout(() => setConfetti(false), 1400);
-  };
+  const popConfetti = () => { setConfetti(true); setTimeout(() => setConfetti(false), 1400); };
 
   const waterPlant = async (plantId) => {
-    if (!state.inventory.water) {
-      showToast('no water! visit the shop 💧', 'warn');
-      return;
-    }
-
+    if (!state.inventory.water) { showToast('no water! visit the shop 💧', 'warn'); return; }
     const plant = state.plants.find(p => p.id === plantId);
     const newWater = Math.min(100, plant.waterLevel + 35);
     const newGrowth = Math.min(100, plant.growth + 8);
@@ -251,27 +232,18 @@ function PlantTracker({ session }) {
     try {
       await Promise.all([
         supabase.from('plants').update({
-          water_level: newWater,
-          growth: newGrowth,
-          last_watered: new Date().toISOString()
+          water_level: newWater, growth: newGrowth, last_watered: new Date().toISOString()
         }).eq('id', plantId),
         supabase.from('inventory').update({ count: state.inventory.water - 1 })
           .eq('user_id', userId).eq('item_id', 'water'),
         supabase.rpc('bump_quest', { p_track: 'water', p_amount: 1 }),
       ]);
       showToast('watered! 💦');
-    } catch (e) {
-      console.error(e);
-      showToast('save failed', 'warn');
-    }
+    } catch (e) { console.error(e); showToast('save failed', 'warn'); }
   };
 
   const fertilizePlant = async (plantId) => {
-    if (!state.inventory.fertilizer) {
-      showToast('no fertilizer! visit the shop ✨', 'warn');
-      return;
-    }
-
+    if (!state.inventory.fertilizer) { showToast('no fertilizer! visit the shop ✨', 'warn'); return; }
     const plant = state.plants.find(p => p.id === plantId);
     const newGrowth = Math.min(100, plant.growth + 25);
 
@@ -290,10 +262,7 @@ function PlantTracker({ session }) {
         supabase.rpc('bump_quest', { p_track: 'fertilize', p_amount: 1 }),
       ]);
       showToast('sparkly growth! ✨');
-    } catch (e) {
-      console.error(e);
-      showToast('save failed', 'warn');
-    }
+    } catch (e) { console.error(e); showToast('save failed', 'warn'); }
   };
 
   const changePot = async (plantId) => {
@@ -301,43 +270,28 @@ function PlantTracker({ session }) {
     const owned = Object.entries(state.inventory)
       .filter(([k, v]) => k.startsWith('pot_') && v > 0)
       .map(([k]) => k.replace('pot_', ''));
-
     if (!owned.includes(plant.pot)) owned.unshift(plant.pot);
-    if (owned.length < 2) {
-      showToast('buy more pots to swap! 🪴', 'warn');
-      return;
-    }
-
+    if (owned.length < 2) { showToast('buy more pots to swap! 🪴', 'warn'); return; }
     const idx = owned.indexOf(plant.pot);
     const nextPot = owned[(idx + 1) % owned.length];
-
     setState(s => ({
       ...s,
       plants: s.plants.map(p => p.id === plantId ? { ...p, pot: nextPot } : p),
     }));
-
     await supabase.from('plants').update({ pot: nextPot }).eq('id', plantId);
     showToast(`switched to ${nextPot} pot 🌷`);
   };
 
   const buyItem = async (cat, item) => {
-    if (state.coins < item.price) {
-      showToast('not enough coins 🥲', 'warn');
-      return;
-    }
-
+    if (state.coins < item.price) { showToast('not enough coins 🥲', 'warn'); return; }
     const payload = cat === 'Pots' ? { color: item.color }
       : cat === 'Seeds' ? { plant: item.plant, nickname: PLANT_TYPES[item.plant].name }
       : {};
 
     try {
       const { error } = await supabase.rpc('purchase_item', {
-        p_category: cat,
-        p_item_id: item.id,
-        p_price: item.price,
-        p_payload: payload,
+        p_category: cat, p_item_id: item.id, p_price: item.price, p_payload: payload,
       });
-
       if (error) throw error;
 
       const fresh = await loadGameState(userId);
@@ -353,13 +307,11 @@ function PlantTracker({ session }) {
     try {
       const { data, error } = await supabase.rpc('claim_quest', { p_quest_id: q.id });
       if (error) throw error;
-
       setState(s => ({
         ...s,
         coins: data,
         quests: { ...s.quests, claimed: [...s.quests.claimed, q.id] },
       }));
-
       popConfetti();
       showToast(`+${q.reward} coins! 🎉`);
     } catch (e) {
@@ -368,9 +320,27 @@ function PlantTracker({ session }) {
     }
   };
 
+  const handlePuzzleWin = async (moves) => {
+    setPuzzleOpen(false);
+    setState(s => ({
+      ...s,
+      quests: { ...s.quests, progress: { ...s.quests.progress, puzzle: 1 } },
+    }));
+    try {
+      await supabase.rpc('bump_quest', { p_track: 'puzzle', p_amount: 1 });
+      popConfetti();
+      showToast(`solved in ${moves} moves! 🧠`);
+    } catch (e) {
+      console.error(e);
+      showToast('save failed', 'warn');
+    }
+  };
+
   const signOut = () => supabase.auth.signOut();
 
   if (!state) return <Splash text="loading your garden…" />;
+
+  const puzzleSolved = (state.quests.progress.puzzle || 0) >= 1;
 
   return (
     <div className="min-h-screen pb-24 relative overflow-hidden"
@@ -422,13 +392,20 @@ function PlantTracker({ session }) {
 
       <main className="relative z-10 max-w-5xl mx-auto px-5">
         {tab === 'garden' && <GardenTab state={state} onWater={waterPlant} onFertilize={fertilizePlant} onChangePot={changePot} setTab={setTab} />}
-        {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} />}
+        {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} onPlayPuzzle={() => setPuzzleOpen(true)} />}
         {tab === 'shop' && <ShopTab state={state} onBuy={buyItem} />}
         {tab === 'map' && <MapTab />}
       </main>
 
+      <MemoryGame
+        open={puzzleOpen}
+        alreadySolved={puzzleSolved}
+        onClose={() => setPuzzleOpen(false)}
+        onWin={handlePuzzleWin}
+      />
+
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pop-in">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pop-in">
           <div className={`px-5 py-3 rounded-full shadow-lg border-2 ${
             toast.kind === 'warn' ? 'bg-[#FFE2CE] border-[#FFB088] text-[#a8552c]' : 'bg-white border-[#FFCDDC] text-[#5D3F6A]'
           }`} style={{ fontFamily: 'Nunito', fontWeight: 700 }}>
@@ -438,12 +415,11 @@ function PlantTracker({ session }) {
       )}
 
       {confetti && (
-        <div className="fixed inset-0 pointer-events-none z-40">
+        <div className="fixed inset-0 pointer-events-none z-[55]">
           {Array.from({ length: 30 }).map((_, i) => (
             <div key={i} className="absolute text-2xl"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: '-20px',
+                left: `${Math.random() * 100}%`, top: '-20px',
                 animation: `confettiFall ${1 + Math.random()}s ease-in forwards`,
                 animationDelay: `${Math.random() * 0.3}s`,
               }}>
@@ -467,7 +443,6 @@ function CoinPill({ coins }) {
 
 function TabBtn({ id, active, setTab, icon, label, badge }) {
   const isActive = active === id;
-
   return (
     <button onClick={() => setTab(id)}
       className={`relative flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-2xl transition-all ${
@@ -495,10 +470,6 @@ function SectionHeader({ title, subtitle, accent }) {
   );
 }
 
-// ────────────────────────────────────────────────────────
-// TABS
-//hello
-// ────────────────────────────────────────────────────────
 function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
   return (
     <div className="pop-in">
@@ -508,13 +479,7 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {state.plants.map(p => (
-          <PlantCard
-            key={p.id}
-            plant={p}
-            onWater={onWater}
-            onFertilize={onFertilize}
-            onChangePot={onChangePot}
-          />
+          <PlantCard key={p.id} plant={p} onWater={onWater} onFertilize={onFertilize} onChangePot={onChangePot} />
         ))}
 
         <button onClick={() => setTab('shop')}
@@ -535,6 +500,9 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
               <InvChip key={k} icon="🪴" label={k.replace('pot_','') + ' pot'} count={state.inventory[k]} />
             ))}
           </div>
+          <p className="text-xs text-[#9b86a8] mt-3" style={{ fontFamily: 'Nunito' }}>
+            tip: tap a plant's pot to swap colors
+          </p>
         </div>
 
         <Leaderboard userId={state.userId} />
@@ -550,26 +518,15 @@ function Leaderboard({ userId }) {
     let mounted = true;
 
     const load = async () => {
-      const [{ data: profiles, error: profileError }, { data: plants, error: plantsError }] = await Promise.all([
-        supabase.from('profiles').select('id, username'),
-        supabase.from('plants').select('id, user_id'),
-      ]);
-
-      if (profileError || plantsError) {
-        console.error(profileError || plantsError);
+      // Use the security-definer RPC so we can count plants across all users
+      // (RLS would otherwise hide other people's plants from the client)
+      const { data, error } = await supabase.rpc('leaderboard_by_plants');
+      if (error) {
+        console.error('leaderboard error:', error);
         if (mounted) setRows([]);
         return;
       }
-
-      const ranked = (profiles || [])
-        .map(profile => ({
-          ...profile,
-          plantCount: (plants || []).filter(p => p.user_id === profile.id).length,
-        }))
-        .sort((a, b) => b.plantCount - a.plantCount)
-        .slice(0, 10);
-
-      if (mounted) setRows(ranked);
+      if (mounted) setRows(data || []);
     };
 
     load();
@@ -606,9 +563,8 @@ function Leaderboard({ userId }) {
                 {i < 3 && <span>{['🥇','🥈','🥉'][i]}</span>}
                 <span>{r.username}</span>
               </span>
-
               <span className="flex items-center gap-1 text-[#6FAF7A]" style={{ fontFamily: 'Fredoka', fontWeight: 700 }}>
-                <Sprout size={12} /> {r.plantCount}
+                <Sprout size={12} /> {r.plant_count}
               </span>
             </li>
           ))}
@@ -692,7 +648,7 @@ function InvChip({ icon, label, count }) {
   );
 }
 
-function QuestsTab({ state, onClaim }) {
+function QuestsTab({ state, onClaim, onPlayPuzzle }) {
   return (
     <div className="pop-in">
       <SectionHeader title="Daily Quests" subtitle="resets at midnight · earn coins to grow your garden" accent="🌟" />
@@ -703,17 +659,20 @@ function QuestsTab({ state, onClaim }) {
           const progress = Math.min(raw, q.goal);
           const claimed = state.quests.claimed.includes(q.id);
           const ready = progress >= q.goal && !claimed;
+          const isGame = !!q.game;
+          const playable = isGame && progress < q.goal && !claimed;
 
           return (
             <div key={q.id}
               className={`rounded-3xl p-5 border-2 transition relative ${
                 claimed ? 'bg-[#E8E0F0] border-white opacity-60'
                 : ready ? 'bg-gradient-to-br from-[#FFF4C2] to-[#FFE2CE] border-[#FFD79C] shadow-[0_4px_20px_-8px_rgba(255,180,90,0.5)]'
+                : isGame ? 'bg-gradient-to-br from-[#E5DBF7] to-[#F0E5FF] border-[#D4C5F0] shadow-[0_4px_20px_-8px_rgba(159,141,255,0.4)]'
                 : 'bg-white/80 border-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.08)]'
               }`}>
               <div className="flex items-start gap-4">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${
-                  claimed ? 'bg-white/60' : ready ? 'bg-white' : 'bg-[#FFF4F8]'
+                  claimed ? 'bg-white/60' : ready ? 'bg-white' : isGame ? 'bg-white/80' : 'bg-[#FFF4F8]'
                 }`}>{questIcon(q.track)}</div>
 
                 <div className="flex-1 min-w-0">
@@ -723,21 +682,28 @@ function QuestsTab({ state, onClaim }) {
                       <Coins size={14} /> {q.reward}
                     </div>
                   </div>
-
                   <p className="text-sm text-[#9b86a8] mb-3" style={{ fontFamily: 'Nunito' }}>{q.desc}</p>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-white rounded-full overflow-hidden border border-[#F0DDE8]">
-                      <div className="water-fill h-full bg-gradient-to-r from-[#FFCDDC] to-[#FF9CB8]"
-                        style={{ width: `${(progress / q.goal) * 100}%` }} />
+                  {!isGame && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-white rounded-full overflow-hidden border border-[#F0DDE8]">
+                        <div className="water-fill h-full bg-gradient-to-r from-[#FFCDDC] to-[#FF9CB8]"
+                          style={{ width: `${(progress / q.goal) * 100}%` }} />
+                      </div>
+                      <span className="text-xs shrink-0" style={{ fontFamily: 'Fredoka', fontWeight: 600, color: '#5D3F6A' }}>
+                        {progress}/{q.goal}
+                      </span>
                     </div>
-                    <span className="text-xs shrink-0" style={{ fontFamily: 'Fredoka', fontWeight: 600, color: '#5D3F6A' }}>
-                      {progress}/{q.goal}
-                    </span>
-                  </div>
+                  )}
                 </div>
               </div>
 
+              {playable && (
+                <button onClick={onPlayPuzzle}
+                  className="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-[#9F8DFF] to-[#7E68F0] text-white shadow-[0_3px_0_#5C46C5] hover:translate-y-[-1px] transition flex items-center justify-center gap-2"
+                  style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: '1rem' }}>
+                  🧠 Play
+                </button>
+              )}
               {ready && (
                 <button onClick={() => onClaim(q)}
                   className="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-[#FF9CB8] to-[#FF6B9D] text-white shadow-[0_3px_0_#D54C7E] hover:translate-y-[-1px] transition flex items-center justify-center gap-2"
@@ -745,7 +711,6 @@ function QuestsTab({ state, onClaim }) {
                   <Sparkles size={16} /> Claim reward
                 </button>
               )}
-
               {claimed && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-[#7a5a8a]" style={{ fontFamily: 'Nunito', fontWeight: 700 }}>
                   <Check size={16} /> Claimed!
@@ -760,7 +725,7 @@ function QuestsTab({ state, onClaim }) {
 }
 
 function questIcon(track) {
-  return { login: '☀️', water: '💧', fertilize: '✨', shop: '🛍️', plants: '🌱' }[track] || '⭐';
+  return { login: '☀️', water: '💧', fertilize: '✨', shop: '🛍️', plants: '🌱', puzzle: '🧠' }[track] || '⭐';
 }
 
 function ShopTab({ state, onBuy }) {
@@ -775,17 +740,14 @@ function ShopTab({ state, onBuy }) {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {items.map(item => {
               const can = state.coins >= item.price;
-
               return (
                 <div key={item.id}
                   className="bg-white/80 backdrop-blur rounded-3xl p-4 border-2 border-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)] flex flex-col items-center text-center hover:translate-y-[-2px] transition">
                   <div className="text-5xl mb-2 float">{item.icon}</div>
                   <div style={{ fontFamily: 'Fredoka', fontWeight: 600, color: '#5D3F6A', fontSize: '0.95rem' }}>{item.name}</div>
-
                   {item.desc && (
                     <div className="text-[11px] text-[#9b86a8] mt-0.5" style={{ fontFamily: 'Nunito' }}>{item.desc}</div>
                   )}
-
                   <button onClick={() => onBuy(category, item)} disabled={!can}
                     className={`mt-3 w-full py-2 rounded-2xl flex items-center justify-center gap-1 transition ${
                       can ? 'bg-gradient-to-r from-[#FFF0B5] to-[#FFE2CE] text-[#A8741D] shadow-[0_2px_0_#E8C988] hover:translate-y-[-1px]'
@@ -811,27 +773,19 @@ function MapTab() {
 
       <div className="bg-white/70 backdrop-blur rounded-3xl border-2 border-dashed border-[#D4C5F0] p-12 text-center min-h-[400px] flex flex-col items-center justify-center gap-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(#C7CEEA 2px, transparent 2px)',
-          backgroundSize: '32px 32px',
+          backgroundImage: 'radial-gradient(#C7CEEA 2px, transparent 2px)', backgroundSize: '32px 32px',
         }} />
-
         <div className="text-7xl float relative z-10">🗺️</div>
-
         <h3 style={{ fontFamily: 'Caveat', fontSize: '2.4rem', color: '#5D3F6A', lineHeight: 1 }} className="relative z-10">
           map coming soon!
         </h3>
-
         <p className="text-[#9b86a8] max-w-md relative z-10" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
           your teammate's transport game lives here. they share the same database, so deliveries
           deposit coins straight into your garden 🌸
         </p>
-
         <div className="flex gap-2 relative z-10 mt-2">
-          <span className="text-3xl">🚂</span>
-          <span className="text-3xl">📦</span>
-          <span className="text-3xl">🏞️</span>
+          <span className="text-3xl">🚂</span><span className="text-3xl">📦</span><span className="text-3xl">🏞️</span>
         </div>
-
         <div className="absolute bottom-4 right-4 text-xs text-[#b9aac4]" style={{ fontFamily: 'Nunito' }}>
           {'<'}TeammateMapGame /{'>'}
         </div>
