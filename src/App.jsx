@@ -464,6 +464,7 @@ function SectionHeader({ title, subtitle, accent }) {
 
 // ────────────────────────────────────────────────────────
 // TABS
+//hello
 // ────────────────────────────────────────────────────────
 function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
   return (
