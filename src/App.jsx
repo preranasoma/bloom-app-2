@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase, loadGameState } from './supabase.js';
 import MemoryGame from './games/MemoryGame.jsx';
+import SlidePuzzle from './games/SlidePuzzle.jsx';
 
 const PLANT_TYPES = {
   sprout:    { name: 'Lil Sprout',     stages: ['🌱','🌿','🌳'], hue: 'mint'     },
@@ -41,14 +42,23 @@ const SHOP = {
 };
 
 // Quests with optional `game` field — when present, the quest shows a Play button
+// and `game` matches a key in the GAMES registry below
 const QUEST_TEMPLATE = [
   { id: 'login',        name: 'Daily Visitor',  desc: 'Visit your garden today',  goal: 1, reward: 20,  track: 'login'     },
-  { id: 'memory_match', name: 'Memory Match',   desc: "Solve today's puzzle",     goal: 1, reward: 75,  track: 'puzzle', game: 'memory' },
+  { id: 'memory_match', name: 'Memory Match',   desc: "Solve today's memory puzzle", goal: 1, reward: 75, track: 'puzzle', game: 'memory' },
+  { id: 'slide_puzzle', name: 'Slide Puzzle',   desc: 'Slide tiles into the right order', goal: 1, reward: 85, track: 'slide', game: 'slide' },
   { id: 'water_3',      name: 'Hydration Hero', desc: 'Water 3 plants',           goal: 3, reward: 50,  track: 'water'     },
   { id: 'fert_1',       name: 'Growth Spurt',   desc: 'Use fertilizer once',      goal: 1, reward: 30,  track: 'fertilize' },
   { id: 'shop_1',       name: 'Garden Shopper', desc: 'Buy something',            goal: 1, reward: 25,  track: 'shop'      },
   { id: 'plants_5',     name: 'Green Thumb',    desc: 'Have 5 plants total',      goal: 5, reward: 100, track: 'plants'    },
 ];
+
+// Game registry — to add a new game, drop a row here and import the component
+// {key: { component, track, icon}}. `track` must match a quest's `track` value.
+const GAMES = {
+  memory: { component: MemoryGame,  track: 'puzzle', icon: '🧠' },
+  slide:  { component: SlidePuzzle, track: 'slide',  icon: '🧩' },
+};
 
 const HUE_BG = {
   pink: 'bg-[#FFE0EA]', lemon: 'bg-[#FFF4C2]', mint: 'bg-[#D6F3E2]',
@@ -180,7 +190,7 @@ function PlantTracker({ session }) {
   const [state, setState] = useState(null);
   const [toast, setToast] = useState(null);
   const [confetti, setConfetti] = useState(false);
-  const [puzzleOpen, setPuzzleOpen] = useState(false);
+  const [openGame, setOpenGame] = useState(null); // null | 'memory' | 'slide' | ...
 
   useEffect(() => {
     loadGameState(userId).then(setState).catch(err => {
@@ -293,7 +303,6 @@ function PlantTracker({ session }) {
         p_category: cat, p_item_id: item.id, p_price: item.price, p_payload: payload,
       });
       if (error) throw error;
-
       const fresh = await loadGameState(userId);
       setState(fresh);
       showToast(`got ${item.name}! ${item.icon}`);
@@ -320,16 +329,19 @@ function PlantTracker({ session }) {
     }
   };
 
-  const handlePuzzleWin = async (moves) => {
-    setPuzzleOpen(false);
+  // Generic game-win handler — looks up the track from the GAMES registry
+  const handleGameWin = async (gameKey, moves) => {
+    setOpenGame(null);
+    const game = GAMES[gameKey];
+    if (!game) return;
     setState(s => ({
       ...s,
-      quests: { ...s.quests, progress: { ...s.quests.progress, puzzle: 1 } },
+      quests: { ...s.quests, progress: { ...s.quests.progress, [game.track]: 1 } },
     }));
     try {
-      await supabase.rpc('bump_quest', { p_track: 'puzzle', p_amount: 1 });
+      await supabase.rpc('bump_quest', { p_track: game.track, p_amount: 1 });
       popConfetti();
-      showToast(`solved in ${moves} moves! 🧠`);
+      showToast(`solved in ${moves} moves! ${game.icon}`);
     } catch (e) {
       console.error(e);
       showToast('save failed', 'warn');
@@ -339,8 +351,6 @@ function PlantTracker({ session }) {
   const signOut = () => supabase.auth.signOut();
 
   if (!state) return <Splash text="loading your garden…" />;
-
-  const puzzleSolved = (state.quests.progress.puzzle || 0) >= 1;
 
   return (
     <div className="min-h-screen pb-24 relative overflow-hidden"
@@ -392,17 +402,25 @@ function PlantTracker({ session }) {
 
       <main className="relative z-10 max-w-5xl mx-auto px-5">
         {tab === 'garden' && <GardenTab state={state} onWater={waterPlant} onFertilize={fertilizePlant} onChangePot={changePot} setTab={setTab} />}
-        {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} onPlayPuzzle={() => setPuzzleOpen(true)} />}
+        {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} onPlayGame={(g) => setOpenGame(g)} />}
         {tab === 'shop' && <ShopTab state={state} onBuy={buyItem} />}
         {tab === 'map' && <MapTab />}
       </main>
 
-      <MemoryGame
-        open={puzzleOpen}
-        alreadySolved={puzzleSolved}
-        onClose={() => setPuzzleOpen(false)}
-        onWin={handlePuzzleWin}
-      />
+      {/* Render every registered game modal — only the one matching openGame is open */}
+      {Object.entries(GAMES).map(([key, game]) => {
+        const Component = game.component;
+        const alreadySolved = (state.quests.progress[game.track] || 0) >= 1;
+        return (
+          <Component
+            key={key}
+            open={openGame === key}
+            alreadySolved={alreadySolved}
+            onClose={() => setOpenGame(null)}
+            onWin={(moves) => handleGameWin(key, moves)}
+          />
+        );
+      })}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pop-in">
@@ -516,10 +534,7 @@ function Leaderboard({ userId }) {
 
   useEffect(() => {
     let mounted = true;
-
     const load = async () => {
-      // Use the security-definer RPC so we can count plants across all users
-      // (RLS would otherwise hide other people's plants from the client)
       const { data, error } = await supabase.rpc('leaderboard_by_plants');
       if (error) {
         console.error('leaderboard error:', error);
@@ -528,7 +543,6 @@ function Leaderboard({ userId }) {
       }
       if (mounted) setRows(data || []);
     };
-
     load();
 
     const ch = supabase.channel('lb')
@@ -648,7 +662,7 @@ function InvChip({ icon, label, count }) {
   );
 }
 
-function QuestsTab({ state, onClaim, onPlayPuzzle }) {
+function QuestsTab({ state, onClaim, onPlayGame }) {
   return (
     <div className="pop-in">
       <SectionHeader title="Daily Quests" subtitle="resets at midnight · earn coins to grow your garden" accent="🌟" />
@@ -661,6 +675,7 @@ function QuestsTab({ state, onClaim, onPlayPuzzle }) {
           const ready = progress >= q.goal && !claimed;
           const isGame = !!q.game;
           const playable = isGame && progress < q.goal && !claimed;
+          const gameMeta = isGame ? GAMES[q.game] : null;
 
           return (
             <div key={q.id}
@@ -698,10 +713,10 @@ function QuestsTab({ state, onClaim, onPlayPuzzle }) {
               </div>
 
               {playable && (
-                <button onClick={onPlayPuzzle}
+                <button onClick={() => onPlayGame(q.game)}
                   className="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-[#9F8DFF] to-[#7E68F0] text-white shadow-[0_3px_0_#5C46C5] hover:translate-y-[-1px] transition flex items-center justify-center gap-2"
                   style={{ fontFamily: 'Fredoka', fontWeight: 700, fontSize: '1rem' }}>
-                  🧠 Play
+                  {gameMeta?.icon} Play
                 </button>
               )}
               {ready && (
@@ -725,7 +740,7 @@ function QuestsTab({ state, onClaim, onPlayPuzzle }) {
 }
 
 function questIcon(track) {
-  return { login: '☀️', water: '💧', fertilize: '✨', shop: '🛍️', plants: '🌱', puzzle: '🧠' }[track] || '⭐';
+  return { login: '☀️', water: '💧', fertilize: '✨', shop: '🛍️', plants: '🌱', puzzle: '🧠', slide: '🧩' }[track] || '⭐';
 }
 
 function ShopTab({ state, onBuy }) {
@@ -736,7 +751,6 @@ function ShopTab({ state, onBuy }) {
       {Object.entries(SHOP).map(([category, items]) => (
         <div key={category} className="mb-7">
           <h3 className="mb-3 px-1" style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A' }}>{category}</h3>
-
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {items.map(item => {
               const can = state.coins >= item.price;
@@ -770,7 +784,6 @@ function MapTab() {
   return (
     <div className="pop-in">
       <SectionHeader title="Map Adventure" subtitle="coming soon ✿" accent="🗺️" />
-
       <div className="bg-white/70 backdrop-blur rounded-3xl border-2 border-dashed border-[#D4C5F0] p-12 text-center min-h-[400px] flex flex-col items-center justify-center gap-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20" style={{
           backgroundImage: 'radial-gradient(#C7CEEA 2px, transparent 2px)', backgroundSize: '32px 32px',
