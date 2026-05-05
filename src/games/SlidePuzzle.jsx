@@ -217,12 +217,18 @@ export default function SlidePuzzle({ open, onWin, onClose, alreadySolved }) {
 
         {won && !alreadySolved && (
           <div className="mt-4 text-center">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#FFF4C2] to-[#FFE2CE] px-4 py-2 rounded-full text-[#A8741D]"
-                 style={{ fontFamily: 'Fredoka', fontWeight: 700 }}>
-              <Sparkles size={16} /> solved! claim your reward
-            </div>
-          </div>
-        )}
+            <button
+             onClick={() => {
+              onWin?.(moves);   // give reward
+              onClose?.();      // close modal
+            }}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#FFF4C2] to-[#FFE2CE] px-4 py-2 rounded-full text-[#A8741D] hover:scale-105 transition"
+            style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+          >
+            <Sparkles size={16} /> solved! claim your reward
+          </button>
+        </div>
+      )}
       </div>
     </div>
   );
