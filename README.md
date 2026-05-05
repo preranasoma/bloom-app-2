@@ -149,19 +149,6 @@ await supabase.from('inventory').upsert({
 
 ---
 
-## Common issues
-
-| symptom | likely cause |
-| --- | --- |
-| signup works but no profile/plants exist | the `on_auth_user_created` trigger didn't run — re-paste the schema and confirm the trigger exists under Database → Triggers |
-| "row violates row-level security policy" on insert | you're trying to insert with a `user_id` that isn't `auth.uid()` — for hackathon code, always use `auth.uid()` server-side |
-| signup succeeds but login fails | "Confirm email" is on and you haven't clicked the email link. Either click it or turn confirmation off in Auth → Providers → Email |
-| coins don't update across tabs | check that `alter publication supabase_realtime add table public.profiles;` ran successfully (last block of schema.sql) |
-| leaderboard is empty | profiles table needs a SELECT-everyone policy — the schema includes one (`profiles read`); confirm under Authentication → Policies |
-| Vercel build succeeds but page is blank | env vars not set on Vercel, or set on the wrong environment (Production vs Preview) |
-
----
-
 ## What's next (post-hackathon ideas)
 
 - **Trading UI** — the `trades` table and RLS are already set up. Just needs a "send trade" form and an inbox.
@@ -169,5 +156,3 @@ await supabase.from('inventory').upsert({
 - **Friend system** — a `friendships` table with mutual confirmation; filter the leaderboard to friends only.
 - **Achievements** — a separate `achievements` table for permanent unlocks (vs. daily quests).
 - **Stripe** — sell premium pots or cosmetic-only plants. Supabase has a Stripe integration.
-
-Good luck with the hackathon 🌸
