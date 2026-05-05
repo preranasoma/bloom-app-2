@@ -472,7 +472,7 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
         subtitle={`${state.plants.length} ${state.plants.length === 1 ? 'plant' : 'plants'} blooming`}
         accent="🪴" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {state.plants.map(p => <PlantCard key={p.id} plant={p} onWater={onWater} onFertilize={onFertilize} />)}
+        {state.plants.map(p => <PlantCard key={p.id} plant={p} onWater={onWater} onFertilize={onFertilize} onChangePot={onChangePot} />)}
         <button onClick={() => setTab('shop')}
           className="rounded-3xl border-2 border-dashed border-[#F0C8DD] bg-white/40 hover:bg-white/70 hover:border-[#FF9CB8] transition p-8 flex flex-col items-center justify-center gap-2 min-h-[260px] text-[#a48ab8] hover:text-[#5D3F6A]">
           <Plus size={32} />
