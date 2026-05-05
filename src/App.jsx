@@ -34,9 +34,9 @@ const SHOP = {
     { id: 'bonsai',    name: 'Bonsai Starter', price: 200, icon: '🪴', plant: 'bonsai'    },
   ],
   Pots: [
-    { id: 'pot_pink',     name: 'Bubblegum Pot', price: 40, icon: '🌷', color: 'pink'     },
+    { id: 'pot_pink',     name: 'Pink Pot', price: 40, icon: '🌷', color: 'pink'     },
     { id: 'pot_lavender', name: 'Lilac Pot',     price: 40, icon: '🪻', color: 'lavender' },
-    { id: 'pot_lemon',    name: 'Sunny Pot',     price: 40, icon: '🍋', color: 'lemon'    },
+    { id: 'pot_lemon',    name: 'Lemon Pot',     price: 40, icon: '🍋', color: 'lemon'    },
     { id: 'pot_mint',     name: 'Mint Pot',      price: 40, icon: '🌿', color: 'mint'     },
   ],
 };
