@@ -66,11 +66,12 @@ export default function MemoryGame({ open, onWin, onClose, alreadySolved }) {
 
   // Win detection
   useEffect(() => {
-    if (matched.length > 0 && matched.length === cards.length) {
-      const t = setTimeout(() => onWin?.(moves), 600);
-      return () => clearTimeout(t);
-    }
-  }, [matched, cards.length, moves, onWin]);
+  if (!open || alreadySolved) return;
+  if (matched.length > 0 && matched.length === cards.length) {
+    const t = setTimeout(() => onWin?.(moves), 600);
+    return () => clearTimeout(t);
+  }
+  }, [matched, cards.length, moves, onWin, open, alreadySolved]);
 
   const handleClick = (cardId) => {
     if (locked || alreadySolved) return;
