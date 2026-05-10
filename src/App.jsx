@@ -6,6 +6,7 @@ import {
 import { supabase, loadGameState } from './supabase.js';
 import MemoryGame from './games/MemoryGame.jsx';
 import SlidePuzzle from './games/SlidePuzzle.jsx';
+import WordleFlowers from './games/WordleFlowers.jsx';
 
 const PLANT_TYPES = {
   sprout:    { name: 'Lil Sprout',     stages: ['🌱','🌿','🌳'], hue: 'mint'     },
@@ -44,20 +45,102 @@ const SHOP = {
 // Quests with optional `game` field — when present, the quest shows a Play button
 // and `game` matches a key in the GAMES registry below
 const QUEST_TEMPLATE = [
-  { id: 'login',        name: 'Daily Visitor',  desc: 'Visit your garden today',  goal: 1, reward: 20,  track: 'login'     },
-  { id: 'memory_match', name: 'Memory Match',   desc: "Solve today's memory puzzle", goal: 1, reward: 75, track: 'puzzle', game: 'memory' },
-  { id: 'slide_puzzle', name: 'Slide Puzzle',   desc: 'Slide tiles into the right order', goal: 1, reward: 85, track: 'slide', game: 'slide' },
-  { id: 'water_3',      name: 'Hydration Hero', desc: 'Water 3 plants',           goal: 3, reward: 50,  track: 'water'     },
-  { id: 'fert_1',       name: 'Growth Spurt',   desc: 'Use fertilizer once',      goal: 1, reward: 30,  track: 'fertilize' },
-  { id: 'shop_1',       name: 'Garden Shopper', desc: 'Buy something',            goal: 1, reward: 25,  track: 'shop'      },
-  { id: 'plants_5',     name: 'Green Thumb',    desc: 'Have 5 plants total',      goal: 5, reward: 100, track: 'plants'    },
+  {
+    id: 'login',
+    name: 'Daily Visitor',
+    desc: 'Visit your garden today',
+    goal: 1,
+    reward: 20,
+    track: 'login',
+  },
+
+  {
+    id: 'memory_match',
+    name: 'Memory Match',
+    desc: "Solve today's memory puzzle",
+    goal: 1,
+    reward: 75,
+    track: 'puzzle',
+    game: 'memory',
+  },
+
+  {
+    id: 'flower_wordle',
+    name: 'Flower Wordle',
+    desc: "Guess today's flower word",
+    goal: 1,
+    reward: 90,
+    track: 'wordle',
+    game: 'wordle',
+  },
+
+  {
+    id: 'slide_puzzle',
+    name: 'Slide Puzzle',
+    desc: 'Slide tiles into the right order',
+    goal: 1,
+    reward: 85,
+    track: 'slide',
+    game: 'slide',
+  },
+
+  {
+    id: 'water_3',
+    name: 'Hydration Hero',
+    desc: 'Water 3 plants',
+    goal: 3,
+    reward: 50,
+    track: 'water',
+  },
+
+  {
+    id: 'fert_1',
+    name: 'Growth Spurt',
+    desc: 'Use fertilizer once',
+    goal: 1,
+    reward: 30,
+    track: 'fertilize',
+  },
+
+  {
+    id: 'shop_1',
+    name: 'Garden Shopper',
+    desc: 'Buy something',
+    goal: 1,
+    reward: 25,
+    track: 'shop',
+  },
+
+  {
+    id: 'plants_5',
+    name: 'Green Thumb',
+    desc: 'Have 5 plants total',
+    goal: 5,
+    reward: 100,
+    track: 'plants',
+  },
 ];
 
 // Game registry — to add a new game, drop a row here and import the component
 // {key: { component, track, icon}}. `track` must match a quest's `track` value.
 const GAMES = {
-  memory: { component: MemoryGame,  track: 'puzzle', icon: '🧠' },
-  slide:  { component: SlidePuzzle, track: 'slide',  icon: '🧩' },
+  memory: {
+    component: MemoryGame,
+    track: 'puzzle',
+    icon: '🧠',
+  },
+
+  wordle: {
+    component: WordleFlowers,
+    track: 'wordle',
+    icon: '🌸',
+  },
+
+  slide: {
+    component: SlidePuzzle,
+    track: 'slide',
+    icon: '🧩',
+  },
 };
 
 const HUE_BG = {
@@ -740,7 +823,16 @@ function QuestsTab({ state, onClaim, onPlayGame }) {
 }
 
 function questIcon(track) {
-  return { login: '☀️', water: '💧', fertilize: '✨', shop: '🛍️', plants: '🌱', puzzle: '🧠', slide: '🧩' }[track] || '⭐';
+  return {
+    login: '☀️',
+    water: '💧',
+    fertilize: '✨',
+    shop: '🛍️',
+    plants: '🌱',
+    puzzle: '🧠',
+    wordle: '🌸',
+    slide: '🧩',
+  }[track] || '⭐';
 }
 
 function ShopTab({ state, onBuy }) {
