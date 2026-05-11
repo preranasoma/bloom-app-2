@@ -309,6 +309,35 @@ function PlantTracker({ session }) {
   };
   const popConfetti = () => { setConfetti(true); setTimeout(() => setConfetti(false), 1400); };
 
+  const renamePlant = async (plantId, currentName) => {
+    const newName = prompt('Enter a new plant name:', currentName);
+
+    if (!newName || !newName.trim()) return;
+
+    const cleanName = newName.trim().slice(0, 24);
+
+    setState(s => ({
+      ...s,
+      plants: s.plants.map(p =>
+        p.id === plantId ? { ...p, nickname: cleanName } : p
+      ),
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('plants')
+        .update({ nickname: cleanName })
+        .eq('id', plantId);
+
+      if (error) throw error;
+      showToast(`renamed to ${cleanName} 🌷`);
+    } catch (e) {
+      console.error(e);
+      showToast('rename failed', 'warn');
+    }
+  };
+
+
   const waterPlant = async (plantId) => {
     if (!state.inventory.water) { showToast('no water! visit the shop 💧', 'warn'); return; }
     const plant = state.plants.find(p => p.id === plantId);
@@ -485,7 +514,16 @@ function PlantTracker({ session }) {
       </nav>
 
       <main className="relative z-10 max-w-5xl mx-auto px-5">
-        {tab === 'garden' && <GardenTab state={state} onWater={waterPlant} onFertilize={fertilizePlant} onChangePot={changePot} setTab={setTab} />}
+        {tab === 'garden' && (
+          <GardenTab
+            state={state}
+            onWater={waterPlant}
+            onFertilize={fertilizePlant}
+            onChangePot={changePot}
+            onRename={renamePlant}
+            setTab={setTab}
+          />
+        )}
         {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} onPlayGame={(g) => setOpenGame(g)} />}
         {tab === 'shop' && <ShopTab state={state} onBuy={buyItem} />}
         {tab === 'friends' && (
@@ -580,7 +618,7 @@ function SectionHeader({ title, subtitle, accent }) {
   );
 }
 
-function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
+function GardenTab({ state, onWater, onFertilize, onChangePot, onRename, setTab }) {
   return (
     <div className="pop-in">
       <SectionHeader title="My Garden"
@@ -589,7 +627,14 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {state.plants.map(p => (
-          <PlantCard key={p.id} plant={p} onWater={onWater} onFertilize={onFertilize} onChangePot={onChangePot} />
+          <PlantCard
+            key={p.id}
+            plant={p}
+            onWater={onWater}
+            onFertilize={onFertilize}
+            onChangePot={onChangePot}
+            onRename={onRename}
+          />
         ))}
 
         <button onClick={() => setTab('shop')}
@@ -680,7 +725,7 @@ function Leaderboard({ userId }) {
   );
 }
 
-function PlantCard({ plant, onWater, onFertilize, onChangePot }) {
+function PlantCard({ plant, onWater, onFertilize, onChangePot, onRename }) {
   const type = PLANT_TYPES[plant.type] || PLANT_TYPES.sprout;
   const stageIdx = plant.growth < 34 ? 0 : plant.growth < 67 ? 1 : 2;
   const emoji = type.stages[stageIdx];
@@ -707,8 +752,22 @@ function PlantCard({ plant, onWater, onFertilize, onChangePot }) {
       </div>
 
       <div className="text-center mb-3">
-        <div style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A', lineHeight: 1 }}>{plant.nickname}</div>
-        <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>{type.name} · {stageLabel}</div>
+        <div style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A', lineHeight: 1 }}>
+          {plant.nickname}
+        </div>
+
+        <button
+          onClick={() => onRename(plant.id, plant.nickname)}
+          className="text-xs text-[#9b6bb5] hover:text-[#5D3F6A] underline"
+          style={{ fontFamily: 'Nunito', fontWeight: 700 }}
+          type="button"
+        >
+          rename
+        </button>
+
+        <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
+          {type.name} · {stageLabel}
+        </div>
       </div>
 
       <Bar icon={<Droplets size={11} />} label="water" value={plant.waterLevel} from="#A0D8F0" to="#7AC0E0" />
