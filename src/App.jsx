@@ -7,6 +7,7 @@ import { supabase, loadGameState } from './supabase.js';
 import MemoryGame from './games/MemoryGame.jsx';
 import SlidePuzzle from './games/SlidePuzzle.jsx';
 
+// hello
 const PLANT_TYPES = {
   sprout:    { name: 'Lil Sprout',     stages: ['🌱','🌿','🌳'], hue: 'mint'     },
   sunflower: { name: 'Sunflower',      stages: ['🌱','🌿','🌻'], hue: 'lemon'    },
