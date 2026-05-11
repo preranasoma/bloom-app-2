@@ -7,6 +7,7 @@ import { supabase, loadGameState } from './supabase.js';
 import MemoryGame from './games/MemoryGame.jsx';
 import SlidePuzzle from './games/SlidePuzzle.jsx';
 import WordleFlowers from './games/WordleFlowers.jsx';
+import SproutExpress from './games/SproutExpress.jsx';
 
 // hello
 const PLANT_TYPES = {
@@ -876,26 +877,8 @@ function ShopTab({ state, onBuy }) {
 function MapTab() {
   return (
     <div className="pop-in">
-      <SectionHeader title="Map Adventure" subtitle="coming soon ✿" accent="🗺️" />
-      <div className="bg-white/70 backdrop-blur rounded-3xl border-2 border-dashed border-[#D4C5F0] p-12 text-center min-h-[400px] flex flex-col items-center justify-center gap-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(#C7CEEA 2px, transparent 2px)', backgroundSize: '32px 32px',
-        }} />
-        <div className="text-7xl float relative z-10">🗺️</div>
-        <h3 style={{ fontFamily: 'Caveat', fontSize: '2.4rem', color: '#5D3F6A', lineHeight: 1 }} className="relative z-10">
-          map coming soon!
-        </h3>
-        <p className="text-[#9b86a8] max-w-md relative z-10" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
-          your teammate's transport game lives here. they share the same database, so deliveries
-          deposit coins straight into your garden 🌸
-        </p>
-        <div className="flex gap-2 relative z-10 mt-2">
-          <span className="text-3xl">🚂</span><span className="text-3xl">📦</span><span className="text-3xl">🏞️</span>
-        </div>
-        <div className="absolute bottom-4 right-4 text-xs text-[#b9aac4]" style={{ fontFamily: 'Nunito' }}>
-          {'<'}TeammateMapGame /{'>'}
-        </div>
-      </div>
+      <SectionHeader title="Sprout Express" subtitle="deliver crops to the townspeople! 🚜" accent="🗺️" />
+      <SproutExpress />
     </div>
   );
 }
