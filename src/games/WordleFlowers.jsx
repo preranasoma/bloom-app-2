@@ -4,6 +4,7 @@ const WORDS = ['TULIP', 'ROSES', 'LILAC', 'DAISY', 'BLOOM', 'FERNS'];
 
 // hello
 //hello
+// greetings
 export default function WordleFlowers({ open, alreadySolved, onClose, onWin }) {
   const answer = useMemo(() => {
     const today = new Date();
