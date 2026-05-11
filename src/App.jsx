@@ -878,7 +878,7 @@ function ShopTab({ state, onBuy }) {
 function MapTab() {
   return (
     <div className="pop-in">
-      <SectionHeader title="Sprout Express" subtitle="deliver crops to the townspeople! 🚜" accent="🗺️" />
+      <SectionHeader title="Sprout Express" subtitle="" accent="🗺️" />
       <SproutExpress />
     </div>
   );
