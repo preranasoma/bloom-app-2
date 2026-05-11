@@ -10,6 +10,7 @@ import WordleFlowers from './games/WordleFlowers.jsx';
 import SproutExpress from './games/SproutExpress.jsx';
 
 // hello
+// adding comments
 const PLANT_TYPES = {
   sprout:    { name: 'Lil Sprout',     stages: ['🌱','🌿','🌳'], hue: 'mint'     },
   sunflower: { name: 'Sunflower',      stages: ['🌱','🌿','🌻'], hue: 'lemon'    },
