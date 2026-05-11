@@ -920,7 +920,16 @@ function ShopTab({ state, onBuy }) {
               return (
                 <div key={item.id}
                   className="bg-white/80 backdrop-blur rounded-3xl p-4 border-2 border-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)] flex flex-col items-center text-center hover:translate-y-[-2px] transition">
-                  <div className="text-5xl mb-2 float">{item.icon}</div>
+
+                  {/* Pots render as the actual CSS pot shape; everything else stays an emoji */}
+                  <div className="h-14 mb-2 flex items-end justify-center float">
+                    {category === 'Pots' ? (
+                      <div className={`w-20 h-10 rounded-b-[40%] rounded-t-md ${HUE_BG[item.color]} border-2 border-white shadow-sm`} />
+                    ) : (
+                      <div className="text-5xl leading-none">{item.icon}</div>
+                    )}
+                  </div>
+
                   <div style={{ fontFamily: 'Fredoka', fontWeight: 600, color: '#5D3F6A', fontSize: '0.95rem' }}>{item.name}</div>
                   {item.desc && (
                     <div className="text-[11px] text-[#9b86a8] mt-0.5" style={{ fontFamily: 'Nunito' }}>{item.desc}</div>
