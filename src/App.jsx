@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Coins, Sprout, Trophy, ShoppingBag, Map, Droplets, Sparkles,
-  Check, Leaf, Plus, LogOut, Crown
+  Check, Leaf, Plus, LogOut, Crown, Users
 } from 'lucide-react';
 import { supabase, loadGameState } from './supabase.js';
 import MemoryGame from './games/MemoryGame.jsx';
@@ -309,6 +309,35 @@ function PlantTracker({ session }) {
   };
   const popConfetti = () => { setConfetti(true); setTimeout(() => setConfetti(false), 1400); };
 
+  const renamePlant = async (plantId, currentName) => {
+    const newName = prompt('Enter a new plant name:', currentName);
+
+    if (!newName || !newName.trim()) return;
+
+    const cleanName = newName.trim().slice(0, 24);
+
+    setState(s => ({
+      ...s,
+      plants: s.plants.map(p =>
+        p.id === plantId ? { ...p, nickname: cleanName } : p
+      ),
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('plants')
+        .update({ nickname: cleanName })
+        .eq('id', plantId);
+
+      if (error) throw error;
+      showToast(`renamed to ${cleanName} 🌷`);
+    } catch (e) {
+      console.error(e);
+      showToast('rename failed', 'warn');
+    }
+  };
+
+
   const waterPlant = async (plantId) => {
     if (!state.inventory.water) { showToast('no water! visit the shop 💧', 'warn'); return; }
     const plant = state.plants.find(p => p.id === plantId);
@@ -479,14 +508,32 @@ function PlantTracker({ session }) {
               return prog >= q.goal && !state.quests.claimed.includes(q.id);
             }).length} />
           <TabBtn id="shop" active={tab} setTab={setTab} icon={<ShoppingBag size={18} />} label="Shop" />
+          <TabBtn id="friends" active={tab} setTab={setTab} icon={<Users size={18} />} label="Friends" />
           <TabBtn id="map" active={tab} setTab={setTab} icon={<Map size={18} />} label="Map" />
         </div>
       </nav>
 
       <main className="relative z-10 max-w-5xl mx-auto px-5">
-        {tab === 'garden' && <GardenTab state={state} onWater={waterPlant} onFertilize={fertilizePlant} onChangePot={changePot} setTab={setTab} />}
+        {tab === 'garden' && (
+          <GardenTab
+            state={state}
+            onWater={waterPlant}
+            onFertilize={fertilizePlant}
+            onChangePot={changePot}
+            onRename={renamePlant}
+            setTab={setTab}
+          />
+        )}
         {tab === 'quests' && <QuestsTab state={state} onClaim={claimQuest} onPlayGame={(g) => setOpenGame(g)} />}
         {tab === 'shop' && <ShopTab state={state} onBuy={buyItem} />}
+        {tab === 'friends' && (
+          <FriendsTab
+            state={state}
+            currentUserId={userId}
+            showToast={showToast}
+            refreshState={async () => setState(await loadGameState(userId))}
+          />
+        )}
         {tab === 'map' && <MapTab />}
       </main>
 
@@ -571,7 +618,7 @@ function SectionHeader({ title, subtitle, accent }) {
   );
 }
 
-function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
+function GardenTab({ state, onWater, onFertilize, onChangePot, onRename, setTab }) {
   return (
     <div className="pop-in">
       <SectionHeader title="My Garden"
@@ -580,7 +627,14 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, setTab }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {state.plants.map(p => (
-          <PlantCard key={p.id} plant={p} onWater={onWater} onFertilize={onFertilize} onChangePot={onChangePot} />
+          <PlantCard
+            key={p.id}
+            plant={p}
+            onWater={onWater}
+            onFertilize={onFertilize}
+            onChangePot={onChangePot}
+            onRename={onRename}
+          />
         ))}
 
         <button onClick={() => setTab('shop')}
@@ -671,7 +725,7 @@ function Leaderboard({ userId }) {
   );
 }
 
-function PlantCard({ plant, onWater, onFertilize, onChangePot }) {
+function PlantCard({ plant, onWater, onFertilize, onChangePot, onRename }) {
   const type = PLANT_TYPES[plant.type] || PLANT_TYPES.sprout;
   const stageIdx = plant.growth < 34 ? 0 : plant.growth < 67 ? 1 : 2;
   const emoji = type.stages[stageIdx];
@@ -698,8 +752,22 @@ function PlantCard({ plant, onWater, onFertilize, onChangePot }) {
       </div>
 
       <div className="text-center mb-3">
-        <div style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A', lineHeight: 1 }}>{plant.nickname}</div>
-        <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>{type.name} · {stageLabel}</div>
+        <div style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A', lineHeight: 1 }}>
+          {plant.nickname}
+        </div>
+
+        <button
+          onClick={() => onRename(plant.id, plant.nickname)}
+          className="text-xs text-[#9b6bb5] hover:text-[#5D3F6A] underline"
+          style={{ fontFamily: 'Nunito', fontWeight: 700 }}
+          type="button"
+        >
+          rename
+        </button>
+
+        <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
+          {type.name} · {stageLabel}
+        </div>
       </div>
 
       <Bar icon={<Droplets size={11} />} label="water" value={plant.waterLevel} from="#A0D8F0" to="#7AC0E0" />
@@ -871,6 +939,297 @@ function ShopTab({ state, onBuy }) {
     </div>
   );
 }
+
+
+function FriendsTab({ state, currentUserId, showToast, refreshState }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedPlants, setSelectedPlants] = useState([]);
+  const [likeCount, setLikeCount] = useState(0);
+  const [likedByMe, setLikedByMe] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingGarden, setLoadingGarden] = useState(false);
+
+  const searchGardeners = async () => {
+    const q = query.trim();
+
+    if (!q) {
+      setResults([]);
+      showToast('type a username to search 🌱', 'warn');
+      return;
+    }
+
+    setLoadingSearch(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, coins')
+        .ilike('username', `%${q}%`)
+        .neq('id', currentUserId)
+        .limit(10);
+
+      if (error) throw error;
+      setResults(data || []);
+
+      if (!data || data.length === 0) {
+        showToast('no gardeners found', 'warn');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('search failed', 'warn');
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  const loadGarden = async (user) => {
+    setSelectedUser(user);
+    setLoadingGarden(true);
+
+    try {
+      const [plantsRes, likesRes, likedRes] = await Promise.all([
+        supabase
+          .from('plants')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('planted_at'),
+
+        supabase
+          .from('garden_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', user.id),
+
+        supabase
+          .from('garden_likes')
+          .select('*')
+          .eq('owner_id', user.id)
+          .eq('liker_id', currentUserId)
+          .maybeSingle(),
+      ]);
+
+      if (plantsRes.error) throw plantsRes.error;
+      if (likesRes.error) throw likesRes.error;
+      if (likedRes.error && likedRes.error.code !== 'PGRST116') throw likedRes.error;
+
+      setSelectedPlants((plantsRes.data || []).map(dbPlantToUi));
+      setLikeCount(likesRes.count || 0);
+      setLikedByMe(!!likedRes.data);
+    } catch (err) {
+      console.error(err);
+      showToast('could not open garden', 'warn');
+    } finally {
+      setLoadingGarden(false);
+    }
+  };
+
+  const toggleLike = async () => {
+    if (!selectedUser) return;
+
+    try {
+      if (likedByMe) {
+        const { error } = await supabase
+          .from('garden_likes')
+          .delete()
+          .eq('owner_id', selectedUser.id)
+          .eq('liker_id', currentUserId);
+
+        if (error) throw error;
+
+        setLikedByMe(false);
+        setLikeCount(c => Math.max(0, c - 1));
+        showToast('removed garden like');
+      } else {
+        const { error } = await supabase
+          .from('garden_likes')
+          .insert({ owner_id: selectedUser.id, liker_id: currentUserId });
+
+        if (error) throw error;
+
+        setLikedByMe(true);
+        setLikeCount(c => c + 1);
+        showToast('liked garden 💖');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('like failed', 'warn');
+    }
+  };
+
+  const sendGift = async (itemId) => {
+    if (!selectedUser) return;
+
+    if (!state.inventory[itemId]) {
+      showToast(`you do not have ${itemId} to gift`, 'warn');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc('send_garden_gift', {
+        p_to_user: selectedUser.id,
+        p_item_id: itemId,
+      });
+
+      if (error) throw error;
+
+      await refreshState();
+      showToast(`sent ${itemId} gift to ${selectedUser.username} 🎁`);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'gift failed', 'warn');
+    }
+  };
+
+  return (
+    <div className="pop-in">
+      <SectionHeader title="Friends' Gardens" subtitle="search gardeners, visit gardens, like plants, and send gifts" accent="👥" />
+
+      <div className="bg-white/70 backdrop-blur rounded-3xl p-5 border border-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)] mb-5">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') searchGardeners();
+            }}
+            placeholder="search username..."
+            className="flex-1 px-4 py-3 rounded-2xl bg-[#FFF4F8] border-2 border-[#F0DDE8] focus:border-[#FF9CB8] outline-none"
+            style={{ fontFamily: 'Nunito', fontWeight: 700, color: '#5D3F6A' }}
+          />
+
+          <button
+            onClick={searchGardeners}
+            disabled={loadingSearch}
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#FF9CB8] to-[#FF6B9D] text-white shadow-[0_3px_0_#D54C7E] hover:translate-y-[-1px] disabled:opacity-50 transition"
+            style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+          >
+            {loadingSearch ? 'searching...' : 'Search'}
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {results.map(user => (
+            <div key={user.id}
+              className="flex items-center justify-between gap-3 bg-[#FFF4F8] border border-[#F0DDE8] rounded-2xl px-4 py-3">
+              <div>
+                <div style={{ fontFamily: 'Fredoka', fontWeight: 700, color: '#5D3F6A' }}>
+                  🌷 {user.username}
+                </div>
+                <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
+                  gardener profile
+                </div>
+              </div>
+
+              <button
+                onClick={() => loadGarden(user)}
+                className="px-4 py-2 rounded-xl bg-white text-[#7a5a8a] border border-[#F0DDE8] hover:bg-[#FFE0EA] transition"
+                style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+              >
+                Visit
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selectedUser && (
+        <div className="bg-white/70 backdrop-blur rounded-3xl p-5 border border-white shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)]">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+            <div>
+              <h3 style={{ fontFamily: 'Caveat', fontSize: '2rem', color: '#5D3F6A', lineHeight: 1 }}>
+                🌸 {selectedUser.username}'s Garden
+              </h3>
+              <p className="text-sm text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
+                {likeCount} {likeCount === 1 ? 'like' : 'likes'} · {selectedPlants.length} plants
+              </p>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={toggleLike}
+                className={`px-4 py-2 rounded-2xl transition ${
+                  likedByMe
+                    ? 'bg-[#FFE0EA] text-[#D54C7E] border-2 border-[#FF9CB8]'
+                    : 'bg-white text-[#9b86a8] border-2 border-[#F0DDE8] hover:bg-[#FFE0EA]'
+                }`}
+                style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+              >
+                {likedByMe ? '💖 Liked' : '🤍 Like'}
+              </button>
+
+              <button
+                onClick={() => sendGift('water')}
+                className="px-4 py-2 rounded-2xl bg-[#E0F4FF] text-[#3A6BB5] border-2 border-white hover:translate-y-[-1px] transition"
+                style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+              >
+                🎁 Send Water ×{state.inventory.water || 0}
+              </button>
+
+              <button
+                onClick={() => sendGift('fertilizer')}
+                className="px-4 py-2 rounded-2xl bg-[#F0E5FF] text-[#7a5a8a] border-2 border-white hover:translate-y-[-1px] transition"
+                style={{ fontFamily: 'Fredoka', fontWeight: 700 }}
+              >
+                🎁 Send Fertilizer ×{state.inventory.fertilizer || 0}
+              </button>
+            </div>
+          </div>
+
+          {loadingGarden ? (
+            <p className="text-sm text-[#9b86a8]" style={{ fontFamily: 'Nunito' }}>loading garden...</p>
+          ) : selectedPlants.length === 0 ? (
+            <div className="rounded-3xl border-2 border-dashed border-[#F0C8DD] bg-white/40 p-8 text-center text-[#9b86a8]"
+              style={{ fontFamily: 'Nunito', fontWeight: 700 }}>
+              This gardener does not have plants yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {selectedPlants.map(plant => (
+                <FriendPlantCard key={plant.id} plant={plant} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FriendPlantCard({ plant }) {
+  const type = PLANT_TYPES[plant.type] || PLANT_TYPES.sprout;
+  const stageIdx = plant.growth < 34 ? 0 : plant.growth < 67 ? 1 : 2;
+  const emoji = type.stages[stageIdx];
+  const stageLabel = ['Sprouting','Growing','Bloomed'][stageIdx];
+
+  return (
+    <div className={`relative rounded-3xl p-5 border-2 border-white shadow-[0_6px_24px_-12px_rgba(255,154,191,0.5)] ${HUE_BG[type.hue]} overflow-hidden`}>
+      <div className="flex flex-col items-center mb-3 relative">
+        <div className="text-7xl select-none" style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.08))' }}>
+          {emoji}
+        </div>
+
+        <div className={`mt-1 w-24 h-12 rounded-b-[40%] rounded-t-md ${HUE_BG[plant.pot]} border-2 border-white relative`}
+          style={{ marginTop: '-8px' }}>
+          <div className="absolute -top-1 left-0 right-0 h-2 bg-white/40 rounded-full" />
+        </div>
+      </div>
+
+      <div className="text-center mb-3">
+        <div style={{ fontFamily: 'Caveat', fontSize: '1.6rem', color: '#5D3F6A', lineHeight: 1 }}>
+          {plant.nickname}
+        </div>
+        <div className="text-xs text-[#9b86a8]" style={{ fontFamily: 'Nunito', fontWeight: 600 }}>
+          {type.name} · {stageLabel}
+        </div>
+      </div>
+
+      <Bar icon={<Droplets size={11} />} label="water" value={plant.waterLevel} from="#A0D8F0" to="#7AC0E0" />
+      <Bar icon={<Leaf size={11} />} label="growth" value={plant.growth} from="#B8E8D0" to="#7DD3A8" />
+    </div>
+  );
+}
+
 
 function MapTab() {
   return (
