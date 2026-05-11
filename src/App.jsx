@@ -952,6 +952,7 @@ function ShopTab({ state, onBuy }) {
   );
 }
 
+//hello
 
 function FriendsTab({ state, currentUserId, showToast, refreshState }) {
   const [query, setQuery] = useState('');
