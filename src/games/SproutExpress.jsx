@@ -273,7 +273,7 @@ class GameScene extends Phaser.Scene {
     this.heartSprites = [];
     for (let i = 0; i < this.maxHearts; i++) {
       const heart = this.add.sprite(0, 0, 'hearts', 0)
-        .setScrollFactor(0).setDepth(1001).setOrigin(0.5).setScale(2.0);
+        .setScrollFactor(0).setDepth(1001).setOrigin(0.5).setScale(1.5);
       this.heartSprites.push(heart);
     }
 
@@ -353,10 +353,10 @@ class GameScene extends Phaser.Scene {
   positionInventoryBar() {
     const { width, height } = this.scale;
     const pad       = 14;
-    const slotSize  = 42;
-    const slotGap   = 5;
-    const innerPad  = 8;
-    const heartPx   = 32; // 16px frame * scale 2.0
+    const slotSize  = 34;
+    const slotGap   = 4;
+    const innerPad  = 6;
+    const heartPx   = 24; // 16px frame * scale 1.5
     const heartGap  = 4;
     const heartRowH = heartPx + 6;
 
@@ -482,7 +482,7 @@ class GameScene extends Phaser.Scene {
 
     this.hearts--;
     if (this.heartSprites[this.hearts]) {
-      this.heartSprites[this.hearts].setFrame(4); // empty heart frame
+      this.heartSprites[this.hearts].setFrame(2); // fully dark/empty heart frame
     }
 
     this.player.setTint(0xff4444);
