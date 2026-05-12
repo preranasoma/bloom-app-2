@@ -24,7 +24,7 @@ class GameScene extends Phaser.Scene {
     this.load.image('Chest', '/assets/tilesets/Chest.png');
     this.load.image('Farming Plants v2 watered', '/assets/tilesets/Farming Plants v2 watered.png');
     this.load.image('Fences', '/assets/tilesets/Fences.png');
-    this.load.image('inventoryBar', '/assets/tilesets/inventory_example_with_slots_2.png');
+    this.load.spritesheet('inventorySlot', '/assets/tilesets/Inventory_Blocks_Spritesheet.png', { frameWidth: 32, frameHeight: 32 });
 
     this.load.spritesheet('plants', '/assets/tilesets/Farming Plants v2 watered.png', {
       frameWidth: 16,
@@ -240,10 +240,10 @@ class GameScene extends Phaser.Scene {
     this.inventoryItems = this.loadInventorySave();
     this.selectedIndex  = 0;
 
-    this.inventoryBar = this.add.image(0, 0, 'inventoryBar')
-      .setScrollFactor(0)
-      .setOrigin(1, 1)
-      .setDepth(1000);
+    this.inventoryBg = this.add.graphics().setScrollFactor(0).setDepth(998);
+    this.inventorySlotBgs = Array.from({ length: INVENTORY_SIZE }, () =>
+      this.add.graphics().setScrollFactor(0).setDepth(999)
+    );
 
     this.inventoryIcons = this.inventoryItems.map(() =>
       this.add.sprite(0, 0, 'plants', 0)
@@ -254,10 +254,10 @@ class GameScene extends Phaser.Scene {
         .setScale(1.5)
     );
 
-    this.inventorySelection = this.add.rectangle(0, 0, 40, 40)
+    this.inventorySelection = this.add.rectangle(0, 0, 42, 42)
       .setStrokeStyle(2, 0xffff00)
       .setScrollFactor(0)
-      .setDepth(999)
+      .setDepth(1003)
       .setOrigin(0.5);
 
     this.scoreText = this.add.text(14, 14, 'Deliveries: 0', {
@@ -272,14 +272,14 @@ class GameScene extends Phaser.Scene {
     this.heartSprites = [];
     for (let i = 0; i < this.maxHearts; i++) {
       const heart = this.add.sprite(0, 0, 'hearts', 0)
-        .setScrollFactor(0).setDepth(1001).setOrigin(0.5).setScale(1.1);
+        .setScrollFactor(0).setDepth(1001).setOrigin(0.5).setScale(2.0);
       this.heartSprites.push(heart);
     }
 
     this.uiCamera = this.cameras.add(0, 0, this.scale.width, this.scale.height);
     this.uiCamera.setScroll(0, 0);
 
-    const uiObjects = [this.inventoryBar, this.inventorySelection, ...this.inventoryIcons, this.scoreText, ...this.heartSprites];
+    const uiObjects = [this.inventoryBg, ...this.inventorySlotBgs, this.inventorySelection, ...this.inventoryIcons, this.scoreText, ...this.heartSprites];
     this.cameras.main.ignore(uiObjects);
     this.uiCamera.ignore(this.children.list.filter(obj => !uiObjects.includes(obj)));
 
@@ -351,20 +351,47 @@ class GameScene extends Phaser.Scene {
 
   positionInventoryBar() {
     const { width, height } = this.scale;
-    const padding     = 16;
-    const barX        = width  - padding;
-    const barY        = height - padding;
-    const slotSpacing = 48;
-    const barLeft     = barX - this.inventoryBar.displayWidth;
-    const startX      = barLeft + 30;
-    const slotY       = barY - 43;
+    const pad       = 14;
+    const slotSize  = 42;
+    const slotGap   = 5;
+    const innerPad  = 8;
+    const heartPx   = 32; // 16px frame * scale 2.0
+    const heartGap  = 4;
+    const heartRowH = heartPx + 6;
 
-    this.inventoryBar.setPosition(barX, barY);
-    this.inventoryIcons.forEach((icon, i) => icon.setPosition(startX + i * slotSpacing, slotY));
-    this.inventorySelection.setPosition(startX + this.selectedIndex * slotSpacing, slotY);
+    const barW    = INVENTORY_SIZE * slotSize + (INVENTORY_SIZE - 1) * slotGap + innerPad * 2;
+    const barH    = slotSize + innerPad * 2 + heartRowH;
+    const barLeft = width  - pad - barW;
+    const barTop  = height - pad - barH;
 
-    const heartY = barY - this.inventoryBar.displayHeight - 10;
-    this.heartSprites.forEach((heart, i) => heart.setPosition(barX - this.inventoryBar.displayWidth + 18 + i * 22, heartY));
+    // Background
+    this.inventoryBg.clear();
+    this.inventoryBg.fillStyle(0x4a3020, 0.92);
+    this.inventoryBg.fillRoundedRect(barLeft, barTop, barW, barH, 10);
+    this.inventoryBg.lineStyle(2, 0x2e1e10, 1);
+    this.inventoryBg.strokeRoundedRect(barLeft, barTop, barW, barH, 10);
+
+    // Slots
+    const slotTop = barTop + innerPad + heartRowH;
+    for (let i = 0; i < INVENTORY_SIZE; i++) {
+      const sx = barLeft + innerPad + i * (slotSize + slotGap);
+      this.inventorySlotBgs[i].clear();
+      this.inventorySlotBgs[i].fillStyle(0xc8a870, 1);
+      this.inventorySlotBgs[i].fillRoundedRect(sx, slotTop, slotSize, slotSize, 5);
+      this.inventorySlotBgs[i].lineStyle(2, 0x8a6840, 1);
+      this.inventorySlotBgs[i].strokeRoundedRect(sx, slotTop, slotSize, slotSize, 5);
+      this.inventoryIcons[i].setPosition(sx + slotSize / 2, slotTop + slotSize / 2);
+    }
+
+    // Selection highlight
+    const selX = barLeft + innerPad + this.selectedIndex * (slotSize + slotGap) + slotSize / 2;
+    this.inventorySelection.setPosition(selX, slotTop + slotSize / 2);
+
+    // Hearts (top row of bar)
+    const heartY = barTop + innerPad + heartPx / 2;
+    this.heartSprites.forEach((h, i) =>
+      h.setPosition(barLeft + innerPad + i * (heartPx + heartGap) + heartPx / 2, heartY)
+    );
   }
 
   updateInventoryDisplay() {
@@ -453,8 +480,9 @@ class GameScene extends Phaser.Scene {
     request.deadline     = 0;
 
     this.hearts--;
-    const gone = this.heartSprites.pop();
-    if (gone) gone.destroy();
+    if (this.heartSprites[this.hearts]) {
+      this.heartSprites[this.hearts].setFrame(4); // empty heart frame
+    }
 
     this.player.setTint(0xff4444);
     this.tweens.add({
@@ -792,7 +820,9 @@ export default function SproutExpress() {
           🌱 Welcome to Sprout Express!
         </h3>
         <p className="mb-3 text-[#5D3F6A]" style={{ fontFamily: 'Nunito', fontWeight: 600, fontSize: '0.95rem' }}>
-          Your goal is to deliver crops to the townspeople before their requests expire. Harvest your crops and regrow them when you run out!
+          Your goal is to deliver crops to the townspeople before their requests expire. Harvest your crops and regrow them when you run out! 
+          Every time you complete a delivery, you get more time! However be careful, if you fail to deliver the crop on time, you'll lose a heart. 
+          Lose all your hearts and it's game over!
         </p>
         <div className="flex flex-wrap gap-3">
           {[
