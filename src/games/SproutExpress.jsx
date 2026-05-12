@@ -71,10 +71,10 @@ class GameScene extends Phaser.Scene {
     map.createLayer('Island', tilesets);
     map.createLayer('Dirt', tilesets);
     map.createLayer('Paths', tilesets);
-    const treesLayer = map.createLayer('Trees/Plants/Bushes', tilesets);
+    map.createLayer('Trees/Plants/Bushes', tilesets);
     map.createLayer('Fence', tilesets);
-    const playersHouseLayer = map.createLayer('Players_House', tilesets);
-    const villagerHousesLayer = map.createLayer('Villager Houses', tilesets);
+    map.createLayer('Players_House', tilesets);
+    map.createLayer('Villager Houses', tilesets);
     this.farmLayer = map.createLayer('Players_Farm', tilesets);
     map.createLayer('Misc.', tilesets);
 
@@ -145,30 +145,6 @@ class GameScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.uiCamera.ignore(this.player);
 
-    this.player.body.setSize(10, 10);
-    this.player.body.setOffset(19, 34);
-
-    treesLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, treesLayer);
-
-    playersHouseLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, playersHouseLayer);
-    villagerHousesLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, villagerHousesLayer);
-
-    const waterColliders = this.physics.add.staticGroup();
-    const islandData = map.getLayer('Island');
-    for (let row = 0; row < map.height; row++) {
-      for (let col = 0; col < map.width; col++) {
-        if (islandData.data[row][col].index === -1) {
-          const zone = this.add.zone(col * 16 + 8, row * 16 + 8, 16, 16);
-          this.physics.add.existing(zone, true);
-          waterColliders.add(zone);
-        }
-      }
-    }
-    this.physics.add.collider(this.player, waterColliders);
-
     this.anims.create({ key: 'walk-down',  frames: this.anims.generateFrameNumbers('player', { start: 0,  end: 3  }), frameRate: 8, repeat: -1 });
     this.anims.create({ key: 'walk-up',    frames: this.anims.generateFrameNumbers('player', { start: 4,  end: 7  }), frameRate: 8, repeat: -1 });
     this.anims.create({ key: 'walk-left',  frames: this.anims.generateFrameNumbers('player', { start: 8,  end: 11 }), frameRate: 8, repeat: -1 });
@@ -193,7 +169,7 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(3);
+    this.cameras.main.setZoom(2);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
     this.cursors = this.input.keyboard.createCursorKeys();
