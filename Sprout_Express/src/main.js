@@ -45,6 +45,7 @@ class GameScene extends Phaser.Scene {
     });
 
     this.load.image('dialogBox', 'assets/tilesets/dialog box.png');
+    this.load.audio('bing', 'assets/Audio/bing_1.wav');
   }
 
   // ─── PERSISTENCE ────────────────────────────────────────────────────────────
@@ -136,10 +137,10 @@ class GameScene extends Phaser.Scene {
     map.createLayer('Island', tilesets);
     map.createLayer('Dirt', tilesets);
     map.createLayer('Paths', tilesets);
-    const treesLayer = map.createLayer('Trees/Plants/Bushes', tilesets);
+    map.createLayer('Trees/Plants/Bushes', tilesets);
     map.createLayer('Fence', tilesets);
-    const playersHouseLayer = map.createLayer('Players_House', tilesets);
-    const villagerHousesLayer = map.createLayer('Villager Houses', tilesets);
+    map.createLayer('Players_House', tilesets);
+    map.createLayer('Villager Houses', tilesets);
 
     this.farmLayer = map.createLayer('Players_Farm', tilesets);
     map.createLayer('Misc.', tilesets);
@@ -289,34 +290,6 @@ class GameScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.uiCamera.ignore(this.player);
 
-    // Shrink physics body to the character's feet so movement near obstacles feels natural
-    this.player.body.setSize(10, 10);
-    this.player.body.setOffset(19, 34);
-
-    // Tree collision
-    treesLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, treesLayer);
-
-    // House collision
-    playersHouseLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, playersHouseLayer);
-    villagerHousesLayer.setCollisionByExclusion([-1]);
-    this.physics.add.collider(this.player, villagerHousesLayer);
-
-    // Water boundary: one static zone per empty cell in the Island layer
-    const waterColliders = this.physics.add.staticGroup();
-    const islandData = map.getLayer('Island');
-    for (let row = 0; row < map.height; row++) {
-      for (let col = 0; col < map.width; col++) {
-        if (islandData.data[row][col].index === -1) {
-          const zone = this.add.zone(col * 16 + 8, row * 16 + 8, 16, 16);
-          this.physics.add.existing(zone, true);
-          waterColliders.add(zone);
-        }
-      }
-    }
-    this.physics.add.collider(this.player, waterColliders);
-
     // ANIMATIONS
     this.anims.create({ key: 'walk-down',  frames: this.anims.generateFrameNumbers('player', { start: 0,  end: 3  }), frameRate: 8, repeat: -1 });
     this.anims.create({ key: 'walk-up',    frames: this.anims.generateFrameNumbers('player', { start: 4,  end: 7  }), frameRate: 8, repeat: -1 });
@@ -448,8 +421,8 @@ class GameScene extends Phaser.Scene {
       .setOrigin(0.5).setScale(0.5);
 
     // Timer bar: gray background + colored fill that shrinks left-to-right
-    const barBg   = this.add.rectangle(0,   14, 20, 3, 0x333333).setOrigin(0.5, 0.5);
-    const barFill = this.add.rectangle(-10, 14, 20, 3, 0x44ff44).setOrigin(0,   0.5);
+    const barBg   = this.add.rectangle(0,  7, 12, 2, 0x333333).setOrigin(0.5, 0.5);
+    const barFill = this.add.rectangle(-6, 7, 12, 2, 0x44ff44).setOrigin(0,   0.5);
 
     const container = this.add.container(worldX, worldY, [bubble, icon, barBg, barFill]).setDepth(100);
     this.uiCamera.ignore(container);
@@ -467,7 +440,7 @@ class GameScene extends Phaser.Scene {
       const remaining = request.deadline - now;
       const fraction  = Math.max(0, remaining / this.requestTimeLimit);
 
-      request.timerBarFill.setSize(20 * fraction, 3);
+      request.timerBarFill.setSize(12 * fraction, 2);
       const color = fraction > 0.5 ? 0x44ff44 : fraction > 0.25 ? 0xffaa00 : 0xff4444;
       request.timerBarFill.setFillStyle(color);
 
@@ -539,6 +512,12 @@ class GameScene extends Phaser.Scene {
     request.deadline     = 0;
 
     this.completedDeliveries++;
+    this.sound.play('bing', { volume: 0.6 });
+
+    // Bonus time for all other active requests
+    this.deliveryRequests.forEach(r => {
+      if (r.active && r.deadline > 0) r.deadline += 5000;
+    });
 
     // Speed up spawning (and slightly tighten time limit) as the game progresses
     this.spawnDelay      = Math.max(8000,  this.spawnDelay      - 1500);

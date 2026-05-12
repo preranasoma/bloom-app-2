@@ -40,3 +40,24 @@ curl http://localhost:5001/api/health
 ## Important note
 
 Realtime Supabase subscriptions were removed in this integration pass. The app now refreshes from explicit API calls after actions instead of live database subscriptions.
+
+## Sprout Express (mini-game)
+
+The `Sprout_Express/` folder contains the standalone Phaser game. `src/games/SproutExpress.jsx` embeds it as a React component inside the Bloom app.
+
+### Latest updates
+
+- **Sound effect** — a bing plays on successful delivery (`public/assets/Audio/bing_1.wav`).
+- **Collision system** — player can no longer walk through trees, houses, or into the water; the physics body is trimmed to the character's feet for natural movement.
+- **Camera zoom** — increased from 2× to 3× for a closer view.
+- **New assets** — `public/assets/Audio/` folder added; `pixelFont-7-8x14-sproutLands.ttf` added to tilesets.
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| WASD / Arrow keys | Move |
+| Q | Switch between hoe & watering can |
+| E | Use current tool on nearby crop |
+| Space / Enter | Deliver crop when near a house |
+| R (game over screen) | Restart |
