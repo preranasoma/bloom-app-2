@@ -289,6 +289,23 @@ function PlantTracker({ session }) {
     });
   }, [userId]);
 
+  useEffect(() => {
+  if (!state?.recentGifts?.length) return;
+  const seen = new Set(JSON.parse(localStorage.getItem('seenGifts') || '[]'));
+  const fresh = state.recentGifts.filter(g => !seen.has(g.id));
+  if (fresh.length === 0) return;
+
+  if (fresh.length === 1) {
+    const g = fresh[0];
+    showToast(`${g.from} sent you ${g.item_id}! 🎁`);
+  } else {
+    showToast(`you got ${fresh.length} new gifts! 🎁`);
+  }
+
+  fresh.forEach(g => seen.add(g.id));
+  localStorage.setItem('seenGifts', JSON.stringify([...seen]));
+  }, [state?.recentGifts]);
+
 
   const showToast = (msg, kind = 'success') => {
     setToast({ msg, kind });

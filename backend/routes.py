@@ -9,7 +9,7 @@ atomically (the equivalent of the original Postgres SECURITY DEFINER RPCs).
 """
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from flask import Blueprint, request, jsonify
 from sqlalchemy import func, or_
 
@@ -96,11 +96,33 @@ def get_state():
 
     like_count = GardenLike.query.filter_by(owner_id=uid).count()
 
+    # Recent gifts received (last 7 days) for client-side notifications
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    recent_txns = (
+        Transaction.query
+        .filter(Transaction.user_id == uid)
+        .filter(Transaction.kind == 'delivery')
+        .filter(Transaction.created_at > cutoff)
+        .order_by(Transaction.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    recent_gifts = []
+    for t in recent_txns:
+        meta = json.loads(t.meta) if t.meta else {}
+        sender = db.session.get(User, meta.get('gift_from')) if meta.get('gift_from') else None
+        recent_gifts.append({
+            'id': t.id,
+            'from': sender.username if sender else 'someone',
+            'item_id': meta.get('item_id'),
+        })
+
     return jsonify({
         'userId':    uid,
         'username':  user.username,
         'coins':     user.coins,
         'likeCount': like_count,
+        'recentGifts': recent_gifts,
         'plants':    [p.to_ui() for p in plants],
         'inventory': {row.item_id: row.count for row in inventory},
         'quests': {
