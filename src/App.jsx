@@ -588,7 +588,7 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, onRename, setTab 
   return (
     <div className="pop-in">
       <SectionHeader title="My Garden"
-        subtitle={`${state.plants.length} ${state.plants.length === 1 ? 'plant' : 'plants'} blooming`}
+        subtitle={`${state.plants.length} ${state.plants.length === 1 ? 'plant' : 'plants'} blooming${state.likeCount ? ` · ${state.likeCount} 💖` : ''}`}
         accent="🪴" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

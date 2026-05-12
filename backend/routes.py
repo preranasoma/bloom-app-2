@@ -94,10 +94,13 @@ def get_state():
         progress_map['login'] = 1   # reflect the insert we just did
     progress_map['plants'] = len(plants)
 
+    like_count = GardenLike.query.filter_by(owner_id=uid).count()
+
     return jsonify({
         'userId':    uid,
         'username':  user.username,
         'coins':     user.coins,
+        'likeCount': like_count,
         'plants':    [p.to_ui() for p in plants],
         'inventory': {row.item_id: row.count for row in inventory},
         'quests': {
