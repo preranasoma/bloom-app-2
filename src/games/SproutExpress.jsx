@@ -123,8 +123,8 @@ class GameScene extends Phaser.Scene {
     this.deliveryRequests = this.housePositions.map(house => ({ house, cropType: null, bubble: null, iconSprite: null, timerBarFill: null, active: false, deadline: 0 }));
     this.completedDeliveries = 0;
     this.gameOver = false;
-    this.requestTimeLimit = 45000;
-    this.spawnDelay = 18000;
+    this.requestTimeLimit = 60000;
+    this.spawnDelay = 25000;
 
     this.inventoryItems = this.loadInventorySave();
     this.selectedIndex = 0;
@@ -280,8 +280,8 @@ class GameScene extends Phaser.Scene {
 
     this.deliveryRequests.forEach(r => { if (r.active && r.deadline > 0) r.deadline += 5000; });
 
-    this.spawnDelay = Math.max(8000, this.spawnDelay - 1500);
-    this.requestTimeLimit = Math.max(20000, this.requestTimeLimit - 1000);
+    this.spawnDelay = Math.max(8000, this.spawnDelay - 750);
+    this.requestTimeLimit = Math.max(20000, this.requestTimeLimit - 500);
     if (this.spawnEvent) { this.spawnEvent.remove(); this.spawnEvent = this.time.addEvent({ delay: this.spawnDelay, callback: this.trySpawnRequest, callbackScope: this, loop: true }); }
     this.trySpawnRequest();
     this.showFloatingText(this.player.x, this.player.y - 20, 'Delivered!', '#00ff00');
