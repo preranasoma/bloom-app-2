@@ -169,7 +169,7 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(1.5);
+    this.cameras.main.setZoom(2.5);
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -231,8 +231,8 @@ class GameScene extends Phaser.Scene {
     const pt = this.plantTypes[request.cropType];
     const bubble = this.add.image(0, 0, 'dialogBox').setOrigin(0.5).setScale(0.36);
     const icon = this.add.sprite(0, 0, 'plants', pt.stages[pt.stages.length - 1]).setOrigin(0.5).setScale(0.5);
-    const barBg = this.add.rectangle(0, 14, 20, 3, 0x333333).setOrigin(0.5, 0.5);
-    const barFill = this.add.rectangle(-10, 14, 20, 3, 0x44ff44).setOrigin(0, 0.5);
+    const barBg = this.add.rectangle(0, 7, 12, 2, 0x333333).setOrigin(0.5, 0.5);
+    const barFill = this.add.rectangle(-6, 7, 12, 2, 0x44ff44).setOrigin(0, 0.5);
     const container = this.add.container(worldX, worldY, [bubble, icon, barBg, barFill]).setDepth(100);
     this.uiCamera.ignore(container);
     request.bubble = container; request.iconSprite = icon; request.timerBarFill = barFill;
@@ -243,7 +243,7 @@ class GameScene extends Phaser.Scene {
     for (const request of this.deliveryRequests) {
       if (!request.active || !request.timerBarFill) continue;
       const remaining = request.deadline - now, fraction = Math.max(0, remaining / this.requestTimeLimit);
-      request.timerBarFill.setSize(20 * fraction, 3);
+      request.timerBarFill.setSize(12 * fraction, 2);
       request.timerBarFill.setFillStyle(fraction > 0.5 ? 0x44ff44 : fraction > 0.25 ? 0xffaa00 : 0xff4444);
       if (remaining <= 0) { this.triggerGameOver(); return; }
     }
@@ -277,6 +277,9 @@ class GameScene extends Phaser.Scene {
     request.bubble = null; request.iconSprite = null; request.timerBarFill = null; request.cropType = null; request.active = false; request.deadline = 0;
     this.completedDeliveries++;
     this.sound.play('bing', { volume: 0.6 });
+
+    this.deliveryRequests.forEach(r => { if (r.active && r.deadline > 0) r.deadline += 5000; });
+
     this.spawnDelay = Math.max(8000, this.spawnDelay - 1500);
     this.requestTimeLimit = Math.max(20000, this.requestTimeLimit - 1000);
     if (this.spawnEvent) { this.spawnEvent.remove(); this.spawnEvent = this.time.addEvent({ delay: this.spawnDelay, callback: this.trySpawnRequest, callbackScope: this, loop: true }); }
@@ -380,10 +383,8 @@ export default function SproutExpress() {
       type: Phaser.AUTO,
       backgroundColor: '#d8e9b2',
       scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 960,
-        height: 540,
         parent: gameRef.current,
       },
       pixelArt: true,
