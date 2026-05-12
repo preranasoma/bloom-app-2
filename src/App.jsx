@@ -627,6 +627,10 @@ function GardenTab({ state, onWater, onFertilize, onChangePot, onRename, setTab 
         subtitle={`${state.plants.length} ${state.plants.length === 1 ? 'plant' : 'plants'} blooming${state.likeCount ? ` · ${state.likeCount} 💖` : ''}`}
         accent="🪴" />
 
+      <p style={{ fontFamily: 'Nunito', fontWeight: 600, color: '#9b86a8', fontSize: '0.95rem', marginBottom: '1.25rem' }}>
+        Play games and earn coins to grow your garden 🌱
+      </p>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {state.plants.map(p => (
           <PlantCard
@@ -711,7 +715,7 @@ function Leaderboard({ userId }) {
                 <span>{r.username}</span>
               </span>
               <span className="flex items-center gap-1 text-[#6FAF7A]" style={{ fontFamily: 'Fredoka', fontWeight: 700 }}>
-                <Sprout size={12} /> {r.plant_count}
+                <eout size={12} /> {r.plant_count}
               </span>
             </li>
           ))}
@@ -1192,7 +1196,6 @@ function FriendPlantCard({ plant }) {
 function MapTab() {
   return (
     <div className="pop-in">
-      <SectionHeader title="Sprout Express" subtitle="" accent="🗺️" />
       <SproutExpress />
     </div>
   );
