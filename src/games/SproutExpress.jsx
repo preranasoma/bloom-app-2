@@ -213,7 +213,13 @@ class GameScene extends Phaser.Scene {
 
   trySpawnRequest() {
     if (this.gameOver) return;
-    const farmTypes = [...new Set(Object.values(this.farmData).map(c => c.plantType))];
+    const matureFarmTypes = Object.values(this.farmData)
+      .filter(c => c.stage === this.plantTypes[c.plantType].stages.length - 1)
+      .map(c => c.plantType);
+    const inventoryTypes = this.inventoryItems
+      .filter(item => item !== null)
+      .map(item => item.plantType);
+    const farmTypes = [...new Set([...matureFarmTypes, ...inventoryTypes])];
     if (farmTypes.length === 0) return;
     const inactive = this.deliveryRequests.filter(r => !r.active);
     if (inactive.length === 0) return;
