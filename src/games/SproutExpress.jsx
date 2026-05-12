@@ -257,7 +257,6 @@ class GameScene extends Phaser.Scene {
     );
 
     this.inventorySelection = this.add.rectangle(0, 0, 42, 42)
-      .setStrokeStyle(2, 0xffff00)
       .setScrollFactor(0)
       .setDepth(1003)
       .setOrigin(0.5);
