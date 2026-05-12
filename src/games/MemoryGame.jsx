@@ -149,7 +149,7 @@ export default function MemoryGame({ open, onWin, onClose, alreadySolved }) {
       <div className="mm-modal relative w-full max-w-md bg-gradient-to-b from-[#FFF4F8] to-[#F5F0FF] rounded-3xl p-6 border-2 border-white shadow-2xl"
            onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-[#9b86a8] transition">
+          className="absolute top-4 right-4 z-50 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-[#9b86a8] transition">
           <X size={18} />
         </button>
 
