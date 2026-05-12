@@ -320,7 +320,7 @@ class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(3);
+    this.cameras.main.setZoom(2.5);
 
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
