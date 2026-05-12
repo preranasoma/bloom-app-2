@@ -11,6 +11,7 @@ class GameScene extends Phaser.Scene {
   }
 
   // hello
+  //hello
   preload() {
     this.load.tilemapTiledJSON('map', '/assets/maps/islandMap.json');
 
