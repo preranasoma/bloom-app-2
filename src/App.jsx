@@ -3,7 +3,11 @@ import {
   Coins, Sprout, Trophy, ShoppingBag, Map, Droplets, Sparkles,
   Check, Leaf, Plus, LogOut, Crown, Users
 } from 'lucide-react';
-import { supabase, loadGameState } from './supabase.js';
+import {
+  supabase, loadGameState, updatePlant, waterPlantRequest, fertilizePlantRequest,
+  purchaseItemRequest, claimQuestRequest, bumpQuestRequest, leaderboardRequest,
+  searchUsersRequest, getGardenRequest, likeGardenRequest, unlikeGardenRequest, sendGiftRequest
+} from './api.js';
 import MemoryGame from './games/MemoryGame.jsx';
 import SlidePuzzle from './games/SlidePuzzle.jsx';
 import WordleFlowers from './games/WordleFlowers.jsx';
@@ -279,32 +283,12 @@ function PlantTracker({ session }) {
   const [openGame, setOpenGame] = useState(null); // null | 'memory' | 'slide' | ...
 
   useEffect(() => {
-    loadGameState(userId).then(setState).catch(err => {
+    loadGameState().then(setState).catch(err => {
       console.error(err);
       setToast({ msg: 'failed to load garden', kind: 'warn' });
     });
   }, [userId]);
 
-  useEffect(() => {
-    if (!state) return;
-    const ch = supabase
-      .channel('profile-' + userId)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
-        (payload) => setState(s => s && ({ ...s, coins: payload.new.coins }))
-      )
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'transactions', filter: `user_id=eq.${userId}` },
-        (payload) => {
-          if (payload.new.source === 'map_game') {
-            const delta = payload.new.coin_delta;
-            showToast(`${delta > 0 ? '+' : ''}${delta} from map game! 🚂`);
-          }
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [userId, state?.userId]);
 
   const showToast = (msg, kind = 'success') => {
     setToast({ msg, kind });
@@ -327,12 +311,7 @@ function PlantTracker({ session }) {
     }));
 
     try {
-      const { error } = await supabase
-        .from('plants')
-        .update({ nickname: cleanName })
-        .eq('id', plantId);
-
-      if (error) throw error;
+      await updatePlant(plantId, { nickname: cleanName });
       showToast(`renamed to ${cleanName} 🌷`);
     } catch (e) {
       console.error(e);
@@ -355,14 +334,7 @@ function PlantTracker({ session }) {
     }));
 
     try {
-      await Promise.all([
-        supabase.from('plants').update({
-          water_level: newWater, growth: newGrowth, last_watered: new Date().toISOString()
-        }).eq('id', plantId),
-        supabase.from('inventory').update({ count: state.inventory.water - 1 })
-          .eq('user_id', userId).eq('item_id', 'water'),
-        supabase.rpc('bump_quest', { p_track: 'water', p_amount: 1 }),
-      ]);
+      await waterPlantRequest(plantId);
       showToast('watered! 💦');
     } catch (e) { console.error(e); showToast('save failed', 'warn'); }
   };
@@ -380,12 +352,7 @@ function PlantTracker({ session }) {
     }));
 
     try {
-      await Promise.all([
-        supabase.from('plants').update({ growth: newGrowth }).eq('id', plantId),
-        supabase.from('inventory').update({ count: state.inventory.fertilizer - 1 })
-          .eq('user_id', userId).eq('item_id', 'fertilizer'),
-        supabase.rpc('bump_quest', { p_track: 'fertilize', p_amount: 1 }),
-      ]);
+      await fertilizePlantRequest(plantId);
       showToast('sparkly growth! ✨');
     } catch (e) { console.error(e); showToast('save failed', 'warn'); }
   };
@@ -403,7 +370,7 @@ function PlantTracker({ session }) {
       ...s,
       plants: s.plants.map(p => p.id === plantId ? { ...p, pot: nextPot } : p),
     }));
-    await supabase.from('plants').update({ pot: nextPot }).eq('id', plantId);
+    await updatePlant(plantId, { pot: nextPot });
     showToast(`switched to ${nextPot} pot 🌷`);
   };
 
@@ -414,11 +381,8 @@ function PlantTracker({ session }) {
       : {};
 
     try {
-      const { error } = await supabase.rpc('purchase_item', {
-        p_category: cat, p_item_id: item.id, p_price: item.price, p_payload: payload,
-      });
-      if (error) throw error;
-      const fresh = await loadGameState(userId);
+      await purchaseItemRequest(cat, item, payload);
+      const fresh = await loadGameState();
       setState(fresh);
       showToast(`got ${item.name}! ${item.icon}`);
     } catch (e) {
@@ -429,11 +393,10 @@ function PlantTracker({ session }) {
 
   const claimQuest = async (q) => {
     try {
-      const { data, error } = await supabase.rpc('claim_quest', { p_quest_id: q.id });
-      if (error) throw error;
+      const data = await claimQuestRequest(q.id);
       setState(s => ({
         ...s,
-        coins: data,
+        coins: data.coins,
         quests: { ...s.quests, claimed: [...s.quests.claimed, q.id] },
       }));
       popConfetti();
@@ -454,7 +417,7 @@ function PlantTracker({ session }) {
       quests: { ...s.quests, progress: { ...s.quests.progress, [game.track]: 1 } },
     }));
     try {
-      await supabase.rpc('bump_quest', { p_track: game.track, p_amount: 1 });
+      await bumpQuestRequest(game.track, 1);
       popConfetti();
       showToast(`solved in ${moves} moves! ${game.icon}`);
     } catch (e) {
@@ -534,7 +497,7 @@ function PlantTracker({ session }) {
             state={state}
             currentUserId={userId}
             showToast={showToast}
-            refreshState={async () => setState(await loadGameState(userId))}
+            refreshState={async () => setState(await loadGameState())}
           />
         )}
         {tab === 'map' && <MapTab />}
@@ -675,24 +638,18 @@ function Leaderboard({ userId }) {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const { data, error } = await supabase.rpc('leaderboard_by_plants');
-      if (error) {
+      try {
+        const data = await leaderboardRequest();
+        if (mounted) setRows(data || []);
+      } catch (error) {
         console.error('leaderboard error:', error);
         if (mounted) setRows([]);
-        return;
       }
-      if (mounted) setRows(data || []);
     };
     load();
 
-    const ch = supabase.channel('lb')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'plants' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, load)
-      .subscribe();
-
     return () => {
       mounted = false;
-      supabase.removeChannel(ch);
     };
   }, []);
 
@@ -976,14 +933,7 @@ function FriendsTab({ state, currentUserId, showToast, refreshState }) {
     setLoadingSearch(true);
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, coins')
-        .ilike('username', `%${q}%`)
-        .neq('id', currentUserId)
-        .limit(10);
-
-      if (error) throw error;
+      const data = await searchUsersRequest(q);
       setResults(data || []);
 
       if (!data || data.length === 0) {
@@ -1002,33 +952,10 @@ function FriendsTab({ state, currentUserId, showToast, refreshState }) {
     setLoadingGarden(true);
 
     try {
-      const [plantsRes, likesRes, likedRes] = await Promise.all([
-        supabase
-          .from('plants')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('planted_at'),
-
-        supabase
-          .from('garden_likes')
-          .select('*', { count: 'exact', head: true })
-          .eq('owner_id', user.id),
-
-        supabase
-          .from('garden_likes')
-          .select('*')
-          .eq('owner_id', user.id)
-          .eq('liker_id', currentUserId)
-          .maybeSingle(),
-      ]);
-
-      if (plantsRes.error) throw plantsRes.error;
-      if (likesRes.error) throw likesRes.error;
-      if (likedRes.error && likedRes.error.code !== 'PGRST116') throw likedRes.error;
-
-      setSelectedPlants((plantsRes.data || []).map(dbPlantToUi));
-      setLikeCount(likesRes.count || 0);
-      setLikedByMe(!!likedRes.data);
+      const garden = await getGardenRequest(user.id);
+      setSelectedPlants(garden.plants || []);
+      setLikeCount(garden.like_count || 0);
+      setLikedByMe(!!garden.liked_by_me);
     } catch (err) {
       console.error(err);
       showToast('could not open garden', 'warn');
@@ -1042,26 +969,14 @@ function FriendsTab({ state, currentUserId, showToast, refreshState }) {
 
     try {
       if (likedByMe) {
-        const { error } = await supabase
-          .from('garden_likes')
-          .delete()
-          .eq('owner_id', selectedUser.id)
-          .eq('liker_id', currentUserId);
-
-        if (error) throw error;
-
+        const data = await unlikeGardenRequest(selectedUser.id);
         setLikedByMe(false);
-        setLikeCount(c => Math.max(0, c - 1));
+        setLikeCount(data.like_count ?? Math.max(0, likeCount - 1));
         showToast('removed garden like');
       } else {
-        const { error } = await supabase
-          .from('garden_likes')
-          .insert({ owner_id: selectedUser.id, liker_id: currentUserId });
-
-        if (error) throw error;
-
+        const data = await likeGardenRequest(selectedUser.id);
         setLikedByMe(true);
-        setLikeCount(c => c + 1);
+        setLikeCount(data.like_count ?? (likeCount + 1));
         showToast('liked garden 💖');
       }
     } catch (err) {
@@ -1079,13 +994,7 @@ function FriendsTab({ state, currentUserId, showToast, refreshState }) {
     }
 
     try {
-      const { error } = await supabase.rpc('send_garden_gift', {
-        p_to_user: selectedUser.id,
-        p_item_id: itemId,
-      });
-
-      if (error) throw error;
-
+      await sendGiftRequest(selectedUser.id, itemId);
       await refreshState();
       showToast(`sent ${itemId} gift to ${selectedUser.username} 🎁`);
     } catch (err) {
