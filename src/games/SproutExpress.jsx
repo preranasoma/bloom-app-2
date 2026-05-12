@@ -220,6 +220,7 @@ class GameScene extends Phaser.Scene {
       { x: 19.5, y: 14.5 },
     ];
 
+    //hello
     this.deliveryRequests = this.housePositions.map(house => ({
       house,
       cropType:     null,
