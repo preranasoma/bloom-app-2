@@ -775,6 +775,7 @@ export default function SproutExpress() {
       scene: GameScene,
     });
 
+    
     return () => {
       if (phaserRef.current) {
         phaserRef.current.destroy(true);
