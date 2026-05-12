@@ -252,6 +252,9 @@ class GameScene extends Phaser.Scene {
   triggerGameOver() {
     if (this.gameOver) return;
     this.gameOver = true;
+    window.dispatchEvent(new CustomEvent('sprout-express:game-over', {
+      detail: { deliveries: this.completedDeliveries }
+    }));
     this.physics.pause();
     if (this.spawnEvent) this.spawnEvent.remove();
     const { width, height } = this.scale, cx = width / 2, cy = height / 2;

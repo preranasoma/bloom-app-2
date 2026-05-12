@@ -12,6 +12,7 @@ import MemoryGame from './games/MemoryGame.jsx';
 import SlidePuzzle from './games/SlidePuzzle.jsx';
 import WordleFlowers from './games/WordleFlowers.jsx';
 import SproutExpress from './games/SproutExpress.jsx';
+import { games } from './api.js';   // or wherever your api lives
 
 // hello
 // adding comments
@@ -288,6 +289,24 @@ function PlantTracker({ session }) {
       setToast({ msg: 'failed to load garden', kind: 'warn' });
     });
   }, [userId]);
+
+  useEffect(() => {
+  const handler = async (e) => {
+    const { deliveries } = e.detail || {};
+    if (!deliveries) return;
+    try {
+      const result = await games.sproutExpressFinish(deliveries);
+      if (result.coins_earned > 0) {
+        setState(s => ({ ...s, coins: result.new_balance }));
+        showToast(`+${result.coins_earned} coins from ${deliveries} ${deliveries === 1 ? 'delivery' : 'deliveries'}! 🚜`);
+      }
+    } catch (err) {
+      console.error('sprout express reward failed:', err);
+    }
+  };
+  window.addEventListener('sprout-express:game-over', handler);
+  return () => window.removeEventListener('sprout-express:game-over', handler);
+}, []);
 
   useEffect(() => {
   if (!state?.recentGifts?.length) return;

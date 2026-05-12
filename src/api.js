@@ -111,6 +111,14 @@ export const supabase = {
   removeChannel() {},
 };
 
+export const games = {
+  sproutExpressFinish: (deliveries) =>
+    apiFetch('/api/games/sprout-express/finish', {
+      method: 'POST',
+      body: JSON.stringify({ deliveries }),
+    }),
+};
+
 export async function loadGameState() {
   return apiFetch('/api/state');
 }

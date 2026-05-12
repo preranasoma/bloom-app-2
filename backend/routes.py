@@ -474,3 +474,28 @@ def send_gift(to_user_id):
     db.session.commit()
 
     return jsonify({'ok': True})
+
+# ________________________ sprout express rewards
+
+@bp.route('/games/sprout-express/finish', methods=['POST'])
+@require_auth
+def sprout_express_finish():
+    data = request.get_json(silent=True) or {}
+    deliveries = int(data.get('deliveries', 0))
+    if deliveries < 1:
+        return jsonify({'coins_earned': 0, 'new_balance': None})
+    deliveries = min(deliveries, 50)  # cap so a hacked client can't grant infinite coins
+
+    coins_earned = deliveries * 10  # 10 coins per delivery — tweak to taste
+
+    uid = request.user_id
+    user = db.session.get(User, uid)
+    user.coins += coins_earned
+    _log_txn(uid, 'map_game', 'reward', coins_earned, {'deliveries': deliveries})
+    db.session.commit()
+
+    return jsonify({
+        'coins_earned': coins_earned,
+        'new_balance': user.coins,
+        'deliveries': deliveries,
+    })
